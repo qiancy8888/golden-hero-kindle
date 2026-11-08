@@ -20,6 +20,14 @@
 - Still source/probe only; no playable ARM binary or game ROM is included.
 
 
+## v0.6 (2026-11-08)
+- Added a ROM-free `--display-test` mode that opens the real framebuffer, displays orientation and grayscale calibration, prints touch coordinates, and exits after 40 seconds or by tapping EXIT.
+- Display test copies and restores the visible framebuffer on normal exit, and does not access NC1020 ROM or save files.
+- Added a standalone KUAL display test entry and a ROM-free USB-root installation ZIP built by GitHub Actions.
+- Added tests for ROM file size validation and ROM-free CLI bypass.
+- Replaced pinned upstream direct-overwrite save code with temporary writes + rename, and validated saved-state size/version before restoring.
+- Added storage patch tests. KPW1 device drawing, touch handling, and game operation still require real-device verification.
+
 ## v0.5 (2026-11-07)
 - Integrated the actual framebuffer/touch probe values from the user's KPW1.
 - Confirmed direct touch coordinate mapping (0..758, 0..1024), with no default axis swap/flip.

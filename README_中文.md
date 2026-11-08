@@ -1,6 +1,23 @@
-# Kindle《黄金英雄坛说》KPW1 移植工程 v0.5
+# Kindle《黄金英雄坛说》KPW1 移植工程 v0.6
 
-> 本包是源码与硬件校准工具，不是可直接游玩的游戏安装包。当前仍未包含 KPW1 ARM 游戏可执行文件，也不包含游戏 ROM/Flash 镜像。
+> v0.6 已能通过 GitHub Actions 构建 **无 ROM 的 KUAL 可安装测试包**（包含 ARM 游戏程序与墨水屏/触摸测试入口），但暂时不能直接游玩《黄金英雄坛说》。游戏 ROM/Flash 镜像不随项目提供。
+
+## v0.6 安装与首次测试
+
+1. 打开仓库的 Actions → Build Golden Hero for Kindle PW1，找到最近一次成功的运行记录。
+2. 从 Artifacts 下载文件名包含 `v0.6-rom-free` 的压缩包。GitHub 的 Artifacts ZIP 里面还有一个真正的 Kindle 安装 ZIP，请先解压外层。
+3. 将 `Kindle-Golden-Hero-KPW1-v0.6-ROM-free.zip` 解压到 KPW1 的 USB 根目录。
+4. 安全弹出 Kindle，打开 KUAL → Golden Hero → **屏幕及触摸测试（无需 ROM，40 秒自动退出）**。
+5. 检查 TOP 是否显示在屏幕上方、灰度条方向是否正常；触摸屏幕与 EXIT。报告写在 `golden_hero/logs/display-test.log`。
+6. 画面测试无需 ROM；**请不要直接进入“启动游戏”**，它会要求镜像文件。测试不会修改 WordScreen。
+
+测试会在最长 40 秒后退出，并在正常退出时尝试恢复进入测试前的 framebuffer 画面。若驱动不支持当前刷新调用，请报告日志；实机测试仍属于实验性质。
+
+## 游戏镜像与存档
+
+正式启动需要你有权使用的 `roms/obj_lu.bin`（24 MiB）和 `roms/nc1020.fls`（1 MiB）。
+它们不能通过本项目自动下载或分发。游戏首次运行时会将初始 Flash 复制到 `data/nc1020.fls`，以免覆盖你的原始镜像。
+v0.6 在上游源码中加入了临时文件写入后重命名的存档保护，并在读取存档时检查大小与版本。保存仍由文件系统具体行为决定，请定期备份 `data/`。
 
 ## 已确认的设备环境（来自两份实机只读报告）
 

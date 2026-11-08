@@ -37,6 +37,20 @@ jobs:
       - name: Build host mock adapter (regression check)
         run: ./scripts/build-host-mock.sh
 
+      - name: Run source and safety regression checks
+        run: ./scripts/check-project.sh
+
+      - name: Create ROM-free KUAL installation package
+        run: ./scripts/package-rom-free.sh
+
+      - name: Upload ROM-free KUAL ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-hero-kpw1-v0.6-rom-free-${{ github.sha }}
+          path: Kindle-Golden-Hero-KPW1-v0.6-ROM-free.zip
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Upload KPW1 executable
         uses: actions/upload-artifact@v4
         with:

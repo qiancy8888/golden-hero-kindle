@@ -1,13 +1,18 @@
 {
   "items": [
     {
-      "name": "黄金英雄坛说（启动游戏）",
+      "name": "黄金英雄坛说（需要自行提供游戏镜像）",
       "priority": 0,
       "action": "./launch.sh"
     },
     {
-      "name": "KPW1 设备检测（生成报告）",
+      "name": "屏幕及触摸测试（无需 ROM，40 秒自动退出）",
       "priority": 1,
+      "action": "./display-test.sh"
+    },
+    {
+      "name": "KPW1 设备检测（生成报告）",
+      "priority": 2,
       "action": "./diagnose.sh"
     }
   ]

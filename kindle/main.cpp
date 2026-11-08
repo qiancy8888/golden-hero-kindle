@@ -137,23 +137,27 @@ void lcd_draw(FbScreen& fb,const uint8_t* frame){
 }
 void help(){
  std::puts("Golden Hero for KPW1 [DEVELOPMENT BUILD]\n"
-           "Usage: golden_hero [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
+           "Usage: golden_hero [--display-test] [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
            "ROM files: roms/obj_lu.bin and roms/nc1020.fls\n"
            "Needs /dev/fb0 and an accessible /dev/input/eventN touchscreen.\n"
            "Do NOT run on a PC except --check-files or --help.");
 }
 }
 
+int run_display_test();
+
 int main(int argc,char** argv){
- bool check=false,swap=false,flipx=false,flipy=false;
+ bool check=false,display_test=false,swap=false,flipx=false,flipy=false;
  for(int i=1;i<argc;++i){
   if(!strcmp(argv[i],"--help")){help();return 0;}
   if(!strcmp(argv[i],"--check-files"))check=true;
+  else if(!strcmp(argv[i],"--display-test"))display_test=true;
   else if(!strcmp(argv[i],"--touch-swap-xy"))swap=true;
   else if(!strcmp(argv[i],"--touch-flip-x"))flipx=true;
   else if(!strcmp(argv[i],"--touch-flip-y"))flipy=true;
   else{std::fprintf(stderr,"Unknown argument: %s\n",argv[i]);return 2;}
  }
+ if(display_test) return run_display_test();
  bool ok=check_size(filename_rom,0x8000*0x300) && check_size(filename_initial_flash,0x8000*0x20);
  if(check)return ok?0:3;
  if(!ok){std::fprintf(stderr,"Required NC1020 image(s) not found or wrong size; aborting.\n");return 3;}
@@ -188,7 +192,7 @@ int main(int argc,char** argv){
    for(const auto& b:buttons){
     if(x>=b.x && x<b.x+b.w && y>=b.y && y<b.y+b.h){
      if(b.key==-1)interrupted=1;
-     else if(b.key==-2){wqx::SaveNC1020();std::fprintf(stderr,"Saved NC1020 flash and state.\n");}
+     else if(b.key==-2){wqx::SaveNC1020();std::fprintf(stderr,"Save requested (NOR + state); check logs for any storage errors.\n");}
      else {wqx::SetKey((uint8_t)b.key,true);wqx::RunTimeSlice(85,false);
            wqx::SetKey((uint8_t)b.key,false);}
      break;

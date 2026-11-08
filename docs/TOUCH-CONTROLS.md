@@ -30,3 +30,7 @@ The four directional touch zones form a non-overlapping cross. The remaining 12 
 - Touch actions: a short key-down interval is sent to the emulator, then released.
 
 The first real-device display test must still verify the visual orientation, grayscale polarity and touch accuracy before this is treated as a playable release.
+
+## v0.6 first hardware test
+
+KUAL offers a **ROM-free display/touch test** (no flash or state file access). It exits after a maximum of 40 seconds and attempts to restore the previously visible framebuffer on exit. The touch log is saved as `golden_hero/logs/display-test.log`. The framebuffer update direction and touch response still require visual confirmation on the physical KPW1.

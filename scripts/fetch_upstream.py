@@ -6,6 +6,7 @@ requests or downloads those binary files.
 """
 from hashlib import sha1
 from pathlib import Path
+import re
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -35,6 +36,86 @@ def patch_nc1020_source(data: bytes) -> bytes:
     return data.replace(bad, good, 1)
 
 
+# The pinned NC1020 core overwrites flash/state files directly. An interrupted
+# write (battery loss, process termination, filesystem error) can destroy an
+# existing save. Replace the two writers with temp-write-and-rename versions.
+# These local modifications deliberately fail closed if upstream changes.
+ATOMIC_SAVE_HELPER = r"""
+static bool SaveBufferAtomically(const string& filename, const void* content, size_t length) {
+    const string staged = filename + ".new";
+    FILE* file = fopen(staged.c_str(), "wb");
+    if (file == NULL) return false;
+    bool ok = fwrite(content, 1, length, file) == length;
+    if (ok) ok = fflush(file) == 0;
+    // On legacy Kindle FSP/FUSE, fsync may not be implemented; tolerate only
+    // the explicit unsupported errors, not actual I/O errors.
+    if (ok && fsync(fileno(file)) != 0 &&
+        errno != EINVAL && errno != ENOSYS && errno != EOPNOTSUPP) ok = false;
+    if (fclose(file) != 0) ok = false;
+    if (ok && rename(staged.c_str(), filename.c_str()) == 0) return true;
+    remove(staged.c_str());
+    return false;
+}
+"""
+
+SAFE_SAVE_NOR = r"""void SaveNor(){
+    uint8_t* temp_buff = (uint8_t*)malloc(NOR_SIZE);
+    if (temp_buff == NULL) {
+        fprintf(stderr, "NC1020: out of memory when saving NOR flash\n");
+        return;
+    }
+    ProcessBinary(temp_buff, nor_buff, NOR_SIZE);
+    if (!SaveBufferAtomically(nc1020_rom.norFlashPath, temp_buff, NOR_SIZE))
+        fprintf(stderr, "NC1020: NOR flash could not be safely saved\n");
+    free(temp_buff);
+}"""
+
+SAFE_LOAD_STATES = r"""void LoadStates(){
+    ResetStates();
+    FILE* file = fopen(nc1020_rom.statesPath.c_str(), "rb");
+    if (file == NULL) return;
+    nc1020_states_t saved{};
+    const size_t read_size = fread(&saved, 1, sizeof(saved), file);
+    const int extra = fgetc(file);
+    fclose(file);
+    if (read_size != sizeof(saved) || extra != EOF || saved.version != VERSION) {
+        fprintf(stderr, "NC1020: ignoring invalid/truncated saved state\n");
+        return;
+    }
+    nc1020_states = saved;
+    SwitchVolume();
+}"""
+
+SAFE_SAVE_STATES = r"""void SaveStates(){
+    if (!SaveBufferAtomically(nc1020_rom.statesPath, &nc1020_states, sizeof(nc1020_states)))
+        fprintf(stderr, "NC1020: state could not be safely saved\n");
+}"""
+
+
+def patch_safe_storage(data: bytes) -> bytes:
+    """Replace the pinned core's non-atomic writers and unvalidated state loader."""
+    linebreak = b"\r\n" if b"\r\n" in data else b"\n"
+    include = b"#include <stdlib.h>"
+    if data.count(include) != 1:
+        raise ValueError("The expected NC1020 C runtime include was not found")
+    data = data.replace(include, include + linebreak + b"#include <unistd.h>" + linebreak
+                        + b"#include <errno.h>", 1)
+    if data.count(b"void SaveNor(){") != 1:
+        raise ValueError("Could not locate the expected NC1020 NOR writer")
+    data = data.replace(b"void SaveNor(){", ATOMIC_SAVE_HELPER.encode() + b"\nvoid SaveNor(){", 1)
+    patches = (
+        (rb"(?ms)^void SaveNor\(\)\{.*?^\}", SAFE_SAVE_NOR, b"fwrite(temp_buff"),
+        (rb"(?ms)^void LoadStates\(\)\{.*?^\}", SAFE_LOAD_STATES, b"fread(&nc1020_states"),
+        (rb"(?ms)^void SaveStates\(\)\{.*?^\}", SAFE_SAVE_STATES, b"fwrite(&nc1020_states"),
+    )
+    for regex, replacement, signature in patches:
+        matches = list(re.finditer(regex, data))
+        if len(matches) != 1 or signature not in matches[0].group():
+            raise ValueError(f"Pinned upstream storage function signature changed: {regex!r}")
+        data = data[:matches[0].start()] + replacement.encode() + data[matches[0].end():]
+    return data
+
+
 def main() -> None:
     out = ROOT / "upstream"
     out.mkdir(parents=True, exist_ok=True)
@@ -47,10 +128,10 @@ def main() -> None:
             raise SystemExit(f"Integrity check failed for {name}: {git_blob_sha}")
         if name == "nc1020.cpp":
             try:
-                data = patch_nc1020_source(data)
+                data = patch_safe_storage(patch_nc1020_source(data))
             except ValueError as exc:
                 raise SystemExit(str(exc))
-            print("Applied local NC1020 ROM volume 2 pointer fix.")
+            print("Applied ROM volume pointer and safe-state-save fixes.")
         path = out / name
         path.write_bytes(data)
         print(f"Verified upstream blob {name}: {git_blob_sha}")

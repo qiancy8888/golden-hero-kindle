@@ -8,7 +8,9 @@ The workflow:
 3. Fetches only the pinned NC1020 emulator source files; it does not download ROM/flash images.
 4. Builds and verifies the ARM soft-float ELF and checks its interpreter.
 5. Runs the host mock regression build.
-6. Publishes `build-armel/golden_hero` as a GitHub Actions artifact.
+6. Runs source integrity, save-patch and ROM/file validation regression tests.
+7. Packages a ROM-free KUAL installation ZIP, including a 40-second framebuffer/touch test and no firmware images.
+8. Publishes both the executable and the ROM-free install ZIP as separate GitHub Actions artifacts.
 
 To run manually: GitHub repository -> Actions -> Build Golden Hero for Kindle PW1 -> Run workflow.
 
