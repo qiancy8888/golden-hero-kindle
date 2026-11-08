@@ -13,5 +13,6 @@ struct FbScreen {
  void rect(int x,int y,int width,int height,uint8_t gray);
  void border(int x,int y,int width,int height,uint8_t gray,int thick=3);
  void blit_mono_1bpp(int x,int y,int source_width,int source_height,const uint8_t* bits,int scale,uint8_t foreground=0,uint8_t background=255);
+ void blit_mono_1bpp_scaled(int x,int y,int source_width,int source_height,const uint8_t* bits,int output_width,int output_height,uint8_t foreground=0,uint8_t background=255);
  bool refresh(int x,int y,int width,int height,bool full=false);
 };

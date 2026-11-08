@@ -109,6 +109,31 @@ void FbScreen::blit_mono_1bpp(int x,int y,int sw,int sh,const uint8_t* bits,int 
   rect(x+sx*scale,y+sy*scale,scale,scale,on?fg:bg);
  }
 }
+void FbScreen::blit_mono_1bpp_scaled(int x,int y,int sw,int sh,const uint8_t* bits,int out_w,int out_h,uint8_t fg,uint8_t bg){
+ if(!data||!bits||sw<=0||sh<=0||out_w<=0||out_h<=0)return;
+ if(x<0||y<0||x+out_w>w||y+out_h>h)return;
+ if(depth==8){
+  if(var.grayscale==2){fg=(uint8_t)(255-fg);bg=(uint8_t)(255-bg);}
+  std::vector<uint8_t> row((size_t)out_w);
+  for(int dy=0;dy<out_h;++dy){
+   const int sy=(int)((int64_t)dy*sh/out_h);
+   for(int dx=0;dx<out_w;++dx){
+    const int sx=(int)((int64_t)dx*sw/out_w);
+    const size_t bit=(size_t)sy*(size_t)sw+(size_t)sx;
+    row[(size_t)dx]=(bits[bit>>3]&(1u<<(7-(bit&7))))?fg:bg;
+   }
+   uint8_t* dst=data+((size_t)(y+dy)+(size_t)var.yoffset)*(size_t)stride+
+     ((size_t)x+(size_t)var.xoffset);
+   std::memcpy(dst,row.data(),row.size());
+  }
+  return;
+ }
+ for(int dy=0;dy<out_h;++dy)for(int dx=0;dx<out_w;++dx){
+  const int sy=(int)((int64_t)dy*sh/out_h),sx=(int)((int64_t)dx*sw/out_w);
+  const size_t bit=(size_t)sy*(size_t)sw+(size_t)sx;
+  pixel(x+dx,y+dy,(bits[bit>>3]&(1u<<(7-(bit&7))))?fg:bg);
+ }
+}
 bool FbScreen::refresh(int x,int y,int ww,int hh,bool full){
  if(fd<0||ww<=0||hh<=0)return false;
  const int x1=std::max(0,std::min(x,w));

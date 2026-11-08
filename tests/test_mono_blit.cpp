@@ -29,6 +29,16 @@ int main(){
  fb.blit_mono_1bpp(0,0,2,1,source,1,0,255);
  row=memory+1*10+1;
  assert(row[0]==255&&row[1]==0);
- std::puts("Monochrome LCD blit tests passed: bit order / scale / framebuffer offsets / grayscale inversion.");
+ // Fractional nearest-neighbour scaling: 4x1 source 1010 -> 6x2 output.
+ std::memset(memory,0x7f,sizeof(memory));
+ fb.w=6;fb.h=2;fb.stride=10;fb.var.xoffset=1;fb.var.yoffset=1;fb.var.grayscale=1;
+ fb.blit_mono_1bpp_scaled(0,0,4,1,source,6,2,0,255);
+ row=memory+1*10+1;
+ const uint8_t expected[6]={0,0,255,0,0,255};
+ assert(std::memcmp(row,expected,6)==0);
+ row2=memory+2*10+1;
+ assert(std::memcmp(row,row2,6)==0);
+
+ std::puts("Monochrome LCD blit tests passed: integer/fractional scaling, bit order, offsets and grayscale inversion.");
  return 0;
 }

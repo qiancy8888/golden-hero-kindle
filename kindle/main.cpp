@@ -64,12 +64,16 @@ bool ensure_directory(const std::string& path) {
 }
 struct Button {int x,y,w,h,key;const char* label;};
 std::vector<Button> buttons;
-int gx=0,gy=0,scale=1;
+int gx=0,gy=0,lcd_w=0,lcd_h=0;
 void layout(int w,int h){
-  // KPW1 is 758x1024. Keep the 160x80 LCD at 4x integer scale.
-  scale=std::max(1,std::min((w-22)/160,(h/2-10)/80));
-  gx=(w-160*scale)/2;
-  gy=std::max(44,h/13);
+  // Fill almost the full Kindle width with the 2:1 NC1020 LCD.
+  // Fractional nearest-neighbour scaling enlarges 160x80 to 736x368 on KPW1.
+  lcd_w=std::max(1,w-22);
+  lcd_h=lcd_w/2;
+  const int max_h=h*42/100;
+  if(lcd_h>max_h){lcd_h=max_h;lcd_w=lcd_h*2;}
+  gx=(w-lcd_w)/2;
+  gy=std::max(42,h/14);
 
   buttons.clear();
   const int u=std::max(76,std::min(96,w/8));
@@ -80,22 +84,21 @@ void layout(int w,int h){
   buttons.push_back({dpad_cx-3*u/2,dpad_cy-u/2,u,u,0x3F,"LEFT"});
   buttons.push_back({dpad_cx+u/2,dpad_cy-u/2,u,u,0x1F,"RIGHT"});
 
-  // Full touch keypad: all keys exposed by the upstream GameShell mapping.
+  // X (Shift-X) and Y (Shift-Y) are omitted to give the game LCD more room.
   const int grid_x=w*50/100;
   const int gap=12;
   const int bw=(w-grid_x-18-gap)/2;
-  const int bh=62;
-  const int top=h*43/100;
-  const int step=78;
+  const int bh=68;
+  const int top=h*49/100;
+  const int step=88;
   const struct {int key;const char* label;} actions[]={
     {0x10,"FLY"},{0x13,"MENU"},
     {0x1D,"OK"},{0x3B,"BACK"},
-    {-3,"X (disabled)"},{0x25,"Y"},
     {0x37,"PGUP"},{0x1E,"PGDN"},
     {-2,"SAVE"},{-1,"EXIT"}
   };
   // GAME is injected automatically; MAIN and GAME are not touch controls.
-  for(int i=0;i<10;i++){
+  for(int i=0;i<8;i++){
     const int col=i%2,row=i/2;
     buttons.push_back({grid_x+col*(bw+gap),top+row*step,bw,bh,
                        actions[i].key,actions[i].label});
@@ -153,13 +156,13 @@ int hit_button(int x,int y){
 void ui(FbScreen& fb){
  fb.rect(0,0,fb.w,fb.h,255);
  label(fb,std::max(2,(fb.w-11*18)/2),30,"GOLDEN HERO",3);
- fb.border(gx-5,gy-5,160*scale+10,80*scale+10,0,3);
+ fb.border(gx-5,gy-5,lcd_w+10,lcd_h+10,0,3);
  for(const auto& b:buttons)draw_button(fb,b,false,false);
  fb.refresh(0,0,fb.w,fb.h,true);
 }
 void lcd_draw(FbScreen& fb,const uint8_t* frame){
- fb.blit_mono_1bpp(gx,gy,160,80,frame,scale,0,255);
- fb.refresh(gx,gy,160*scale,80*scale,false);
+ fb.blit_mono_1bpp_scaled(gx,gy,160,80,frame,lcd_w,lcd_h,0,255);
+ fb.refresh(gx,gy,lcd_w,lcd_h,false);
 }
 void lcd_set_pixel(uint8_t* frame,int x,int y){
  if(x<0||x>=160||y<0||y>=80)return;
@@ -194,8 +197,10 @@ bool lcd_draw_diff(FbScreen& fb,const uint8_t* previous,const uint8_t* next){
   ymin=std::min(ymin,y);ymax=std::max(ymax,y+1);
  }
  if(xmax<=xmin||ymax<=ymin)return false;
- fb.blit_mono_1bpp(gx,gy,160,80,next,scale,0,255);
- const bool ok=fb.refresh(gx+xmin*scale,gy+ymin*scale,(xmax-xmin)*scale,(ymax-ymin)*scale,false);
+ fb.blit_mono_1bpp_scaled(gx,gy,160,80,next,lcd_w,lcd_h,0,255);
+ const int x0=xmin*lcd_w/160,y0=ymin*lcd_h/80;
+ const int x1=(xmax*lcd_w+159)/160,y1=(ymax*lcd_h+79)/80;
+ const bool ok=fb.refresh(gx+x0,gy+y0,x1-x0,y1-y0,false);
  std::fprintf(stderr,"LCD dirty rect x=%d..%d y=%d..%d refresh=%d\n",xmin,xmax,ymin,ymax,(int)ok);
  return true;
 }
@@ -284,11 +289,11 @@ int run_touch_test(bool show_lcd,bool playable_demo=false){
   uint8_t demo[1600]={};
   make_demo_lcd(demo);
   lcd_draw(fb,demo);
-  std::fprintf(stderr,"ROM-free LCD layout preview: 160x80 source rendered at %dx scale.\n",scale);
+  std::fprintf(stderr,"ROM-free LCD layout preview: 160x80 source rendered at %dx%d (%dx%d pixels).\n",lcd_w/160,lcd_h/80,lcd_w,lcd_h);
  }else{
-  label(fb,gx+(160*scale-10*18)/2,gy+28*scale,"TOUCH TEST",3);
-  label(fb,gx+(160*scale-12*12)/2,gy+52*scale,"TAP OR HOLD",2);
-  fb.refresh(gx,gy,160*scale,80*scale,false);
+  label(fb,gx+(lcd_w-10*18)/2,gy+lcd_h*28/80,"TOUCH TEST",3);
+  label(fb,gx+(lcd_w-12*12)/2,gy+lcd_h*52/80,"TAP OR HOLD",2);
+  fb.refresh(gx,gy,lcd_w,lcd_h,false);
  }
  std::fprintf(stderr,"Controls test ready: tap or hold any virtual button; EXIT ends on release; timeout=45s.\n");
 

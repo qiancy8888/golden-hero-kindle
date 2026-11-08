@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 BIN=build-armel/golden_hero
-OUT=Kindle-Golden-Hero-KPW1-v0.9.5-ROM-free.zip
+OUT=Kindle-Golden-Hero-KPW1-v0.9.6-ROM-free.zip
 STAGE=build-rom-free-root
 
 [ -s "$BIN" ] || { echo "Missing ARM binary. Run scripts/build-armel.sh first." >&2; exit 2; }

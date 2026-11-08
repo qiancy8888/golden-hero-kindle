@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.9.6 (2026-11-08) — enlarged LCD and simplified touch controls
+- Remove the redundant on-screen X (Shift-X, 0x31) and Y (Shift-Y, 0x25) controls; retain FLY, MENU, OK, BACK, PGUP, PGDN, SAVE and EXIT.
+- Replace integer 4x rendering with fractional nearest-neighbour scaling. On the 758px-wide KPW1 display, the 160x80 NC1020 LCD now uses 736x368 pixels instead of 640x320 (about 15% larger in each dimension).
+- Reflow the remaining touch controls below the enlarged LCD; retain the same key mappings for all remaining controls.
+- Add host regression coverage for fractional monochrome scaling. The automatic GAME key sequence is intentionally unchanged pending confirmation of the exact post-F11 screen.
+
+
 ## v0.9.5 (2026-11-08) — auto-GAME timing and X-key isolation
 - User confirmed the on-screen X control (not Kindle hardware) precedes the Kindle OS reboot.
 - Upstream NC1020 GameShell mapping identifies key 0x31 as Shift-X, not emulator exit or power. Temporarily disable this one key in the diagnostic build to isolate the reboot; restore it after safe testing.

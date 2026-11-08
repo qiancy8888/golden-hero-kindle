@@ -1,4 +1,6 @@
-# Kindle《黄金英雄坛说》KPW1 移植工程 v0.9.5
+# Kindle《黄金英雄坛说》KPW1 移植工程 v0.9.6
+
+> v0.9.6 界面调整：移除 X（Shift-X）和 Y（Shift-Y）两个触摸按钮，保留 FLY、MENU、OK、BACK、PGUP、PGDN、SAVE、EXIT。游戏 LCD 从 640×320 放大到 736×368，约增加 15%，控制按钮重新排布。F11 自动进入游戏逻辑暂时保持 v0.9.5 不变，等待实机确认准确的启动界面后再调整。
 
 > v0.9.5 是 v0.9.4 的诊断修订：将 F11 自动启动延迟由 1.8 秒增加到 6 秒，按键保持 300ms，并在切换后等待 750ms；暂时屏蔽屏幕 X（Shift-X，0x31）按键，以隔离此前出现的系统重启。仍为 30 秒无存档测试版。
 
@@ -8,7 +10,7 @@
 
 **本版仍为 30 秒无存档安全诊断版**：不读取旧存档、不写 NOR/状态文件，MAIN/SAVE 不可用，退出时恢复 Kindle 原画面。自动启动时序需要 KPW1 实机确认；如果 ROM 启动时序不同，可能需要微调等待时间。
 
-首次测试：备份 `documents/GoldenHeroPrivate/data/`（如果存在）；只更新程序和 KUAL 文件，保留个人 ROM；KUAL → Golden Hero → **自动进入黄金英雄坛说（6秒启动等待，X暂时禁用）**。观察是否跳过 NC1020 主菜单。屏幕 X 暂时禁用；不要尝试 MAIN、SAVE 或长时间运行。日志：`/mnt/us/golden_hero/logs/fullscreen-v0.9.5-game.log`。如果仍显示 NC1020 主菜单，上传日志及启动后照片；如果 Kindle 再次重启，立即停止真实 ROM 测试。
+首次测试：备份 `documents/GoldenHeroPrivate/data/`（如果存在）；只更新程序和 KUAL 文件，保留个人 ROM；KUAL → Golden Hero → **自动进入黄金英雄坛说（6秒启动等待）**。观察是否跳过 NC1020 主菜单。不要尝试 MAIN、SAVE 或长时间运行。日志：`/mnt/us/golden_hero/logs/fullscreen-v0.9.6-game.log`。如果仍停在应用程序界面，请在30秒自动退出前拍照，并上传 Kindle 屏幕照片；如果 Kindle 再次重启，立即停止真实 ROM 测试。
 
 ## v0.9.3 Kindle 系统重启安全修复（先不要连续测试）
 
@@ -22,7 +24,7 @@
 5. LCD 刷新从每 180ms 一次降到每 1100ms 一次（有变化时），安全测试 30 秒自动退出；外层 45 秒子进程终止保护和 65 秒 Awesome 恢复保护仍有效。
 6. 和 v0.8.1 一样，在退出时恢复原始 framebuffer，日志位于 `/mnt/us/golden_hero/logs/fullscreen-v0.9.3-game.log`。
 
-**安装前先从 Kindle 备份 `documents/GoldenHeroPrivate/data/` 整个目录（如果存在），不要删除已损坏或尚待分析的存档。** 更新 v0.9.5 安装包时只合并程序及 KUAL 文件，个人 `documents/GoldenHeroPrivate/roms/` 保留原样。首次安全测试不要点击 X、MAIN 或 SAVE；X 暂时禁用，MAIN/SAVE 仍然禁用。只验证自动进入游戏、方向键、OK/BACK 与 EXIT，最多运行 30 秒。
+**安装前先从 Kindle 备份 `documents/GoldenHeroPrivate/data/` 整个目录（如果存在），不要删除已损坏或尚待分析的存档。** 更新 v0.9.6 安装包时只合并程序及 KUAL 文件，个人 `documents/GoldenHeroPrivate/roms/` 保留原样。新版界面不再显示 X/Y；MAIN/SAVE 仍然禁用。只验证自动进入游戏、方向键、OK/BACK 与 EXIT，最多运行 30 秒。
 
 这版是故障隔离的诊断构建，**不保证再也不会导致系统重启**。若仍重启，停止使用真实 ROM 模式，优先取 Kindle 系统日志/电源记录，并保留 `fullscreen-v0.9.3-game.log` 和 `launcher.log`。无 ROM 测试也已加入单实例锁，但不应单凭此判断原因已经找到。
 
