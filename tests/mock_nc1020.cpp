@@ -13,5 +13,14 @@ bool CopyLcdBuffer(uint8_t* out) {
  return true;
 }
 void LoadNC1020() {}
+void GetDebugSnapshot(DebugSnapshot* out) {
+ if(!out)return;
+ std::memset(out,0,sizeof(*out));
+ out->pc=(uint16_t)(0x8000+(ticks&0x7FFF));
+ out->reset_vector=0x8000;
+ out->cycles=ticks*5120;
+ out->lcd_addr=0x2000;
+ out->opcodes[0]=0xEA;
+}
 void SaveNC1020() {}
 }
