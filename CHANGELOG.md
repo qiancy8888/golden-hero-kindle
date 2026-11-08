@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.9.1 (2026-11-08)
+- Confirm real KPW1 UI viewport, 160x80 upscaled 4x, and touch layout from on-device photo.
+- Add a separate original ROM-free mini town walking test: D-pad moves the player, held directions repeat, buildings and an NPC block movement, OK talks to NPC, MENU and BACK open/close overlays.
+- Implement dirty-rectangle LCD refresh for changed bytes and reuse the same refresh path in the eventual real NC1020 game loop.
+- Keep the v0.8.1 original-framebuffer backup, EXIT-on-finger-release, and KUAL recovery watchdog.
+- Add host tests for movement, collision, key repeat and menu; still not the actual copyrighted game, which requires authorized images.
+
+
 ## v0.9.0 (2026-11-08)
 - Add a ROM-free KUAL UI preview that renders a representative 160x80 monochrome LCD screen in the real game viewport alongside the same touch controls.
 - Optimize 1bpp-to-8bpp LCD expansion with a row-buffer blitter instead of thousands of per-pixel framebuffer rectangle calls.

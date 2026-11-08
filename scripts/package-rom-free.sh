@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 BIN=build-armel/golden_hero
-OUT=Kindle-Golden-Hero-KPW1-v0.9.0-ROM-free.zip
+OUT=Kindle-Golden-Hero-KPW1-v0.9.1-ROM-free.zip
 STAGE=build-rom-free-root
 
 [ -s "$BIN" ] || { echo "Missing ARM binary. Run scripts/build-armel.sh first." >&2; exit 2; }
@@ -44,10 +44,12 @@ with ZipFile(output) as archive:
     assert 'extensions/GoldenHeroFullscreen/guarded-test.sh' in names
     assert 'extensions/GoldenHeroFullscreen/test-controls.sh' in names
     assert 'extensions/GoldenHeroFullscreen/test-ui.sh' in names
+    assert 'extensions/GoldenHeroFullscreen/test-demo.sh' in names
     assert 'golden_hero_diagnostics/raw-touch.lua' in names
     assert not any(name.endswith(('obj_lu.bin','nc1020.fls', 'nc1020.sts')) for name in names)
     assert archive.getinfo('golden_hero/golden_hero').external_attr >> 16 & 0o111
     assert archive.getinfo('extensions/GoldenHeroFullscreen/test-controls.sh').external_attr >> 16 & 0o111
     assert archive.getinfo('extensions/GoldenHeroFullscreen/test-ui.sh').external_attr >> 16 & 0o111
+    assert archive.getinfo('extensions/GoldenHeroFullscreen/test-demo.sh').external_attr >> 16 & 0o111
 print(f'Created {output} ({output.stat().st_size:,} bytes) without game/firmware images.')
 PY

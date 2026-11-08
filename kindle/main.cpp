@@ -1,6 +1,7 @@
 #include "nc1020.h"
 #include "fb.h"
 #include "touch.h"
+#include "demo.h"
 #include <algorithm>
 #include <csignal>
 #include <cstdint>
@@ -161,7 +162,73 @@ void make_demo_lcd(uint8_t* frame){
  lcd_draw_text(frame,41,34,"TOUCH UI TEST");
  lcd_draw_text(frame,50,55,"UP DOWN OK");
 }
-int run_touch_test(bool show_lcd){
+// Refresh only the bounding box of changed NC1020 1bpp bytes. The direct
+// framebuffer blit still replaces the complete 640x320 viewport in memory.
+bool lcd_draw_diff(FbScreen& fb,const uint8_t* previous,const uint8_t* next){
+ int xmin=160,ymin=80,xmax=0,ymax=0;
+ for(int byte=0;byte<1600;++byte){
+  if(previous[byte]==next[byte])continue;
+  const int y=byte/20;
+  const int x=(byte%20)*8;
+  xmin=std::min(xmin,x);xmax=std::max(xmax,x+8);
+  ymin=std::min(ymin,y);ymax=std::max(ymax,y+1);
+ }
+ if(xmax<=xmin||ymax<=ymin)return false;
+ fb.blit_mono_1bpp(gx,gy,160,80,next,scale,0,255);
+ const bool ok=fb.refresh(gx+xmin*scale,gy+ymin*scale,(xmax-xmin)*scale,(ymax-ymin)*scale,false);
+ std::fprintf(stderr,"LCD dirty rect x=%d..%d y=%d..%d refresh=%d\n",xmin,xmax,ymin,ymax,(int)ok);
+ return true;
+}
+
+void lcd_box(uint8_t* buffer,int x,int y,int w,int h){
+ for(int i=0;i<w;++i){lcd_set_pixel(buffer,x+i,y);lcd_set_pixel(buffer,x+i,y+h-1);}
+ for(int j=0;j<h;++j){lcd_set_pixel(buffer,x,y+j);lcd_set_pixel(buffer,x+w-1,y+j);}
+}
+void lcd_fill(uint8_t* buffer,int x,int y,int w,int h,bool black){
+ for(int j=0;j<h;++j)for(int i=0;i<w;++i){
+  const int tx=x+i,ty=y+j;
+  if(tx<0||tx>=160||ty<0||ty>=80)continue;
+  const int n=ty*160+tx;
+  if(black)buffer[n>>3]|=(uint8_t)(1u<<(7-(n&7)));
+  else buffer[n>>3]&=(uint8_t)~(1u<<(7-(n&7)));
+ }
+}
+void lcd_tree(uint8_t* frame,int col,int row){
+ const int x=8+col*8,y=18+row*8;
+ lcd_fill(frame,x+3,y,2,7,true);
+ lcd_fill(frame,x+1,y+2,6,2,true);
+}
+void render_town_demo(uint8_t* frame,const DemoGame& game){
+ // This miniature test scene is original and contains no proprietary game art.
+ std::memset(frame,0,1600);
+ lcd_draw_text(frame,42,4,"TOWN DEMO");
+ for(int x=4;x<156;++x)lcd_set_pixel(frame,x,13);
+ lcd_box(frame,4,16,152,56);
+ // A house, trees and an NPC form fixed collision landmarks.
+ lcd_box(frame,8+3*8,18,32,16);
+ lcd_fill(frame,8+4*8,29,6,4,true);
+ lcd_tree(frame,2,4);
+ lcd_tree(frame,13,2);
+ lcd_tree(frame,14,4);
+ const int npc_x=8+11*8,npc_y=18+3*8;
+ lcd_fill(frame,npc_x+2,npc_y,4,4,true);
+ lcd_set_pixel(frame,npc_x+1,npc_y+5);
+ lcd_set_pixel(frame,npc_x+6,npc_y+5);
+ // 5x7 filled player with a white face dot and legs.
+ const int x=8+game.x*8,y=18+game.y*8;
+ lcd_fill(frame,x+1,y,6,6,true);
+ lcd_fill(frame,x+3,y+2,2,2,false);
+ lcd_set_pixel(frame,x+1,y+7);lcd_set_pixel(frame,x+6,y+7);
+ lcd_draw_text(frame,6,74,"OK TALK MENU HELP");
+ if(game.menu||game.talking){
+  lcd_fill(frame,22,22,118,39,false);
+  lcd_box(frame,22,22,118,39);
+  lcd_draw_text(frame,35,30,game.menu?"DEMO PAUSE":"NPC HELLO");
+  lcd_draw_text(frame,32,43,game.menu?"USE DIR KEYS":"WELCOME");
+  lcd_draw_text(frame,32,53,"BACK RETURN");
+ }
+}
+int run_touch_test(bool show_lcd,bool playable_demo=false){
  std::string error;
  FbScreen fb;
  if(!fb.open_fb(error)){std::fprintf(stderr,"Framebuffer: %s\n",error.c_str());return 10;}
@@ -178,7 +245,22 @@ int run_touch_test(bool show_lcd){
  touch.trace_events=true;
  layout(fb.w,fb.h);
  ui(fb);
- if(show_lcd){
+ DemoGame demo;
+ uint8_t prev_lcd[1600]={};
+ bool demo_has_frame=false;
+ const auto update_demo=[&](){
+  uint8_t fresh[1600];
+  render_town_demo(fresh,demo);
+  if(demo_has_frame)lcd_draw_diff(fb,prev_lcd,fresh);
+  else{lcd_draw(fb,fresh);demo_has_frame=true;}
+  std::memcpy(prev_lcd,fresh,sizeof(prev_lcd));
+  std::fprintf(stderr,"DEMO position=(%d,%d) steps=%d menu=%d talking=%d held=%d\n",
+    demo.x,demo.y,demo.steps,(int)demo.menu,(int)demo.talking,demo.held_key);
+ };
+ if(playable_demo){
+  update_demo();
+  std::fprintf(stderr,"ROM-free town demo: arrows move, hold repeats, OK interacts, MENU overlays.\n");
+ }else if(show_lcd){
   uint8_t demo[1600]={};
   make_demo_lcd(demo);
   lcd_draw(fb,demo);
@@ -208,9 +290,12 @@ int run_touch_test(bool show_lcd){
      const Button& b=buttons[(size_t)active_button];
      draw_button(fb,b,true);
      std::fprintf(stderr,"CONTROL DOWN label=%s key=%d x=%d y=%d\n",b.label,b.key,point.x,point.y);
+     if(playable_demo&&b.key>=0&&demo.down(b.key,clock_ms()))update_demo();
      if(b.key==-1)exit_armed=true;
     }else std::fprintf(stderr,"CONTROL DOWN outside x=%d y=%d\n",point.x,point.y);
    }else if(point.active&&point.moved&&hit!=active_button){
+    if(playable_demo&&active_button>=0&&buttons[(size_t)active_button].key>=0)
+      demo.up(buttons[(size_t)active_button].key);
     if(active_button>=0)draw_button(fb,buttons[(size_t)active_button],false);
     active_button=hit;
     exit_armed=false;
@@ -218,6 +303,7 @@ int run_touch_test(bool show_lcd){
      const Button& b=buttons[(size_t)active_button];
      draw_button(fb,b,true);
      std::fprintf(stderr,"CONTROL DRAG label=%s key=%d x=%d y=%d\n",b.label,b.key,point.x,point.y);
+     if(playable_demo&&b.key>=0&&demo.down(b.key,clock_ms()))update_demo();
      if(b.key==-1)exit_armed=true;
     }else std::fprintf(stderr,"CONTROL DRAG outside x=%d y=%d\n",point.x,point.y);
    }
@@ -225,6 +311,7 @@ int run_touch_test(bool show_lcd){
     if(active_button>=0){
      const Button& b=buttons[(size_t)active_button];
      std::fprintf(stderr,"CONTROL UP label=%s key=%d x=%d y=%d\n",b.label,b.key,point.x,point.y);
+     if(playable_demo&&b.key>=0)demo.up(b.key);
      if(b.key==-1&&exit_armed)exit_requested=true;
      draw_button(fb,b,false);
     }else std::fprintf(stderr,"CONTROL UP outside x=%d y=%d\n",point.x,point.y);
@@ -232,6 +319,7 @@ int run_touch_test(bool show_lcd){
     exit_armed=false;
    }
   }
+  if(playable_demo&&demo.tick(clock_ms()))update_demo();
   usleep(15000);
  }
  if(active_button>=0)draw_button(fb,buttons[(size_t)active_button],false);
@@ -250,10 +338,11 @@ int run_touch_test(bool show_lcd){
 }
 int run_controls_test(){return run_touch_test(false);}
 int run_ui_test(){return run_touch_test(true);}
+int run_demo_test(){return run_touch_test(true,true);}
 
 void help(){
  std::puts("Golden Hero for KPW1 [DEVELOPMENT BUILD]\n"
-           "Usage: golden_hero [--display-test] [--controls-test] [--ui-test] [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
+           "Usage: golden_hero [--display-test] [--controls-test] [--ui-test] [--demo-test] [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
            "ROM files: roms/obj_lu.bin and roms/nc1020.fls\n"
            "Needs /dev/fb0 and an accessible /dev/input/eventN touchscreen.\n"
            "Do NOT run on a PC except --check-files or --help.");
@@ -263,13 +352,14 @@ void help(){
 int run_display_test();
 
 int main(int argc,char** argv){
- bool check=false,display_test=false,controls_test=false,ui_test=false,swap=false,flipx=false,flipy=false;
+ bool check=false,display_test=false,controls_test=false,ui_test=false,demo_test=false,swap=false,flipx=false,flipy=false;
  for(int i=1;i<argc;++i){
   if(!strcmp(argv[i],"--help")){help();return 0;}
   if(!strcmp(argv[i],"--check-files"))check=true;
   else if(!strcmp(argv[i],"--display-test"))display_test=true;
   else if(!strcmp(argv[i],"--controls-test"))controls_test=true;
   else if(!strcmp(argv[i],"--ui-test"))ui_test=true;
+  else if(!strcmp(argv[i],"--demo-test"))demo_test=true;
   else if(!strcmp(argv[i],"--touch-swap-xy"))swap=true;
   else if(!strcmp(argv[i],"--touch-flip-x"))flipx=true;
   else if(!strcmp(argv[i],"--touch-flip-y"))flipy=true;
@@ -278,6 +368,7 @@ int main(int argc,char** argv){
  if(display_test) return run_display_test();
  if(controls_test) return run_controls_test();
  if(ui_test) return run_ui_test();
+ if(demo_test) return run_demo_test();
  bool ok=check_size(filename_rom,0x8000*0x300) && check_size(filename_initial_flash,0x8000*0x20);
  if(check)return ok?0:3;
  if(!ok){std::fprintf(stderr,"Required NC1020 image(s) not found or wrong size; aborting.\n");return 3;}
@@ -353,7 +444,9 @@ int main(int argc,char** argv){
   uint64_t now=clock_ms();
   if(now-last_frame>=180){
    if(wqx::CopyLcdBuffer(lcd) && (!was_drawn||memcmp(lcd,previous,1600)!=0)){
-    lcd_draw(fb,lcd);memcpy(previous,lcd,1600);was_drawn=true;
+    if(was_drawn)lcd_draw_diff(fb,previous,lcd);
+    else lcd_draw(fb,lcd);
+    memcpy(previous,lcd,1600);was_drawn=true;
    }
    last_frame=now;
   }

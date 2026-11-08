@@ -12,7 +12,7 @@ else()
   endif()
   set(CORE upstream/nc1020.cpp)
 endif()
-add_executable(golden_hero kindle/main.cpp kindle/display_test.cpp kindle/fb.cpp kindle/touch.cpp ${CORE})
+add_executable(golden_hero kindle/main.cpp kindle/display_test.cpp kindle/fb.cpp kindle/touch.cpp kindle/demo.cpp ${CORE})
 target_include_directories(golden_hero PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/kindle ${CMAKE_CURRENT_SOURCE_DIR}/upstream
   ${CMAKE_CURRENT_SOURCE_DIR}/tests)

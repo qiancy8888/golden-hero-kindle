@@ -19,6 +19,11 @@
       "name": "游戏界面布局预览（无需 ROM，45秒自动恢复）",
       "priority": 3,
       "action": "./test-ui.sh"
+    },
+    {
+      "name": "小镇行走互动测试（无需ROM，45秒自动恢复）",
+      "priority": 4,
+      "action": "./test-demo.sh"
     }
   ]
 }
