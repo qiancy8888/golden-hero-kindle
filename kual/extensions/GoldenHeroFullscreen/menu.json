@@ -11,7 +11,7 @@
       "action": "./test-touch.sh"
     },
     {
-      "name": "触摸按键操作测试（45秒，自动恢复）",
+      "name": "触摸按键操作测试（45秒，自动恢复屏幕）",
       "priority": 2,
       "action": "./test-controls.sh"
     }

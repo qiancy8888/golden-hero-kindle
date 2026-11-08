@@ -2,7 +2,7 @@
 
 An experimental port of the NC1020 emulator core to the first-generation Kindle Paperwhite. The goal is to run **Golden Hero Tan Shuo (黄金英雄坛说)** on the KPW1 e-ink display with a KUAL launcher and touchscreen controls.
 
-**Status: v0.8 ROM-free KUAL touch-controls test build.** The KPW1 touch coordinates have been confirmed on hardware. The game loop now holds NC1020 keys while a virtual button is held, and a protected fullscreen test mode can validate the controls without ROM images. The game itself still requires separately obtained, legally usable NC1020 images.
+**Status: v0.8.1 ROM-free KUAL touch-controls test build.** The KPW1 touch coordinates have been confirmed on hardware. The controls test now restores the pre-test framebuffer and sends a full-screen refresh on exit. The game loop now holds NC1020 keys while a virtual button is held, and a protected fullscreen test mode can validate the controls without ROM images. The game itself still requires separately obtained, legally usable NC1020 images.
 
 [简体中文说明](README_中文.md) · [Changelog](CHANGELOG.md)
 

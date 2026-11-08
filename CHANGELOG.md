@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8.1 (2026-11-08)
+- Fix the KPW1 controls-test EXIT path: it now waits for finger release, restores the exact pre-test framebuffer snapshot, and sends a full-screen EPDC refresh before the KUAL wrapper resumes Awesome and restores Pillow.
+- Restore the framebuffer on timeout and handled SIGINT/SIGTERM as well as EXIT.
+- Log snapshot size, exit reason, and framebuffer restore result for diagnosis.
+
 ## v0.8 (2026-11-08)
 - Use the confirmed KPW1 cyttsp touch coordinates directly (758×1024, no axis swap or flips).
 - Add SYN_REPORT-based touch state transitions: press, move, release, and mapped coordinates.

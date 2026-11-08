@@ -46,8 +46,8 @@ jobs:
       - name: Upload ROM-free KUAL ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: golden-hero-kpw1-v0.8-rom-free-${{ github.sha }}
-          path: Kindle-Golden-Hero-KPW1-v0.8-ROM-free.zip
+          name: golden-hero-kpw1-v0.8.1-rom-free-${{ github.sha }}
+          path: Kindle-Golden-Hero-KPW1-v0.8.1-ROM-free.zip
           if-no-files-found: error
           retention-days: 30
 

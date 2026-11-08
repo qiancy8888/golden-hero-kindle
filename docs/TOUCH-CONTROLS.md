@@ -29,7 +29,8 @@ The key IDs above are taken from the upstream NC1020 SDL keyboard switch, not in
 - The key remains down for the entire contact, allowing the emulator to observe a held key across consecutive RunTimeSlice calls.
 - A finger-up event releases the key.
 - Dragging to another button releases the old key before pressing the new one.
-- SAVE fires once on the initial down event; EXIT exits on initial down.
+- SAVE fires once on the initial down event; EXIT exits only after the finger is released.
+- The controls test snapshots the visible framebuffer before drawing, restores the original pixels on EXIT/timeout/signal, and sends a full-screen EPDC refresh before returning to the KUAL wrapper.
 - The ROM-free controls test uses the same layout/hitboxes, shows a gray pressed-button state, logs DOWN/DRAG/UP and key IDs, and auto-exits after 45 seconds.
 
 ## Protected fullscreen test

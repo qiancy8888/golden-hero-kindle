@@ -1,6 +1,12 @@
-# Kindle《黄金英雄坛说》KPW1 移植工程 v0.8
+# Kindle《黄金英雄坛说》KPW1 移植工程 v0.8.1
 
-> v0.8 已能通过 GitHub Actions 构建 **无 ROM 的 KUAL 可安装测试包**，包含 KPW1 ARM 程序、全屏保护测试入口和触摸按键交互测试。它仍不是可直接游玩的游戏包：游戏 ROM/Flash 镜像不随项目提供。
+> v0.8.1 修复了触摸测试退出后画面停留的问题：退出时恢复原始 framebuffer 并执行全屏刷新。仍为无 ROM 的 KUAL 测试包，不是可直接游玩的游戏包。
+
+## v0.8.1 退出画面恢复修复
+
+上一版日志已证明 EXIT 事件被识别且程序以退出码 0 正常结束；问题在于 controls test 未像 display test 一样保存和恢复原始 framebuffer。v0.8.1 在绘制测试界面前备份当前可见 framebuffer，在 EXIT、45 秒超时或 SIGINT/SIGTERM 时恢复像素并发送全屏 EPDC 刷新，然后才返回 KUAL wrapper 恢复 Awesome 与状态栏。EXIT 现在在手指抬起时确认，避免按下瞬间提前退出。
+
+日志新增 `Original framebuffer snapshot captured` 和 `Previous framebuffer restore refresh: OK/FAILED`。
 
 ## v0.8 触摸交互测试与长按支持
 

@@ -152,58 +152,80 @@ int run_controls_test(){
  if(!fb.open_fb(error)){std::fprintf(stderr,"Framebuffer: %s\n",error.c_str());return 10;}
  TouchInput touch;
  if(!touch.open_touch(error)){std::fprintf(stderr,"Touchscreen: %s\n",error.c_str());fb.close_fb();return 11;}
+
+ // Preserve the screen that was visible before Awesome/Pillow were paused.
+ // Resuming the window manager alone does not guarantee a Kindle UI repaint.
+ const size_t region=(size_t)fb.stride*(size_t)fb.h;
+ unsigned char* visible=fb.data+(size_t)fb.stride*(size_t)fb.var.yoffset;
+ const std::vector<unsigned char> backup(visible,visible+region);
+ std::fprintf(stderr,"Original framebuffer snapshot captured (%zu bytes).\n",region);
+
  touch.trace_events=true;
  layout(fb.w,fb.h);
  ui(fb);
  label(fb,gx+(160*scale-10*18)/2,gy+28*scale,"TOUCH TEST",3);
  label(fb,gx+(160*scale-12*12)/2,gy+52*scale,"TAP OR HOLD",2);
  fb.refresh(gx,gy,160*scale,80*scale,false);
- std::fprintf(stderr,"Controls test ready: tap or hold any virtual button; EXIT ends test; timeout=45s.\n");
+ std::fprintf(stderr,"Controls test ready: tap or hold any virtual button; EXIT ends on release; timeout=45s.\n");
+
+ interrupted=0;
+ std::signal(SIGINT,on_signal);
+ std::signal(SIGTERM,on_signal);
  const uint64_t started=clock_ms();
  int active_button=-1;
+ bool exit_armed=false;
  bool exit_requested=false;
- while(!exit_requested&&clock_ms()-started<45000){
+ while(!exit_requested&&!interrupted&&clock_ms()-started<45000){
   TouchPoint point;
   if(touch.poll_point(fb.w,fb.h,point)){
    const int hit=point.valid?hit_button(point.x,point.y):-1;
    if(point.pressed){
     active_button=hit;
+    exit_armed=false;
     if(active_button>=0){
      const Button& b=buttons[(size_t)active_button];
      draw_button(fb,b,true);
      std::fprintf(stderr,"CONTROL DOWN label=%s key=%d x=%d y=%d\n",b.label,b.key,point.x,point.y);
-     if(b.key==-1)exit_requested=true;
+     if(b.key==-1)exit_armed=true;
     }else std::fprintf(stderr,"CONTROL DOWN outside x=%d y=%d\n",point.x,point.y);
    }else if(point.active&&point.moved&&hit!=active_button){
     if(active_button>=0)draw_button(fb,buttons[(size_t)active_button],false);
     active_button=hit;
+    exit_armed=false;
     if(active_button>=0){
      const Button& b=buttons[(size_t)active_button];
      draw_button(fb,b,true);
      std::fprintf(stderr,"CONTROL DRAG label=%s key=%d x=%d y=%d\n",b.label,b.key,point.x,point.y);
+     if(b.key==-1)exit_armed=true;
     }else std::fprintf(stderr,"CONTROL DRAG outside x=%d y=%d\n",point.x,point.y);
    }
    if(point.released){
     if(active_button>=0){
      const Button& b=buttons[(size_t)active_button];
      std::fprintf(stderr,"CONTROL UP label=%s key=%d x=%d y=%d\n",b.label,b.key,point.x,point.y);
+     if(b.key==-1&&exit_armed)exit_requested=true;
      draw_button(fb,b,false);
     }else std::fprintf(stderr,"CONTROL UP outside x=%d y=%d\n",point.x,point.y);
     active_button=-1;
+    exit_armed=false;
    }
   }
   usleep(15000);
  }
  if(active_button>=0)draw_button(fb,buttons[(size_t)active_button],false);
  const uint64_t elapsed=clock_ms()-started;
+ const char* reason=exit_requested?"EXIT button":interrupted?"signal":"45-second timeout";
  std::fprintf(stderr,"Controls test finished: reason=%s elapsed_ms=%llu events=%lu taps=%lu\n",
-  exit_requested?"EXIT button":"45-second timeout",(unsigned long long)elapsed,
-  touch.event_count,touch.tap_count);
+  reason,(unsigned long long)elapsed,touch.event_count,touch.tap_count);
  touch.close_touch();
- fb.close_fb();
- return 0;
-}
 
+ // Restore framebuffer pixels and force an EPDC refresh before returning to KUAL.
+ std::memcpy(visible,backup.data(),region);
+ const bool restored=fb.refresh(0,0,fb.w,fb.h,true);
+ std::fprintf(stderr,"Previous framebuffer restore refresh: %s\n",restored?"OK":"FAILED");
+ fb.close_fb();
+ return restored?0:12;
+}
 void help(){
  std::puts("Golden Hero for KPW1 [DEVELOPMENT BUILD]\n"
            "Usage: golden_hero [--display-test] [--controls-test] [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
