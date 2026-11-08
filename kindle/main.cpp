@@ -114,15 +114,26 @@ void label(FbScreen& fb,int x,int y,const char* s,int s2=2) {
    if(bits[row*5+col]=='1')fb.rect(x+col*s2,y+row*s2,s2,s2,0);
  }
 }
+void draw_button(FbScreen& fb,const Button& b,bool active,bool refresh=true){
+ fb.rect(b.x+2,b.y+2,b.w-4,b.h-4,active?205:255);
+ fb.border(b.x,b.y,b.w,b.h,0,3);
+ int n=(int)std::strlen(b.label);
+ int f=std::max(1,std::min(3,b.w/(n*6+4)));
+ label(fb,b.x+(b.w-n*6*f)/2,b.y+(b.h-5*f)/2,b.label,f);
+ if(refresh)fb.refresh(b.x,b.y,b.w,b.h,false);
+}
+int hit_button(int x,int y){
+ for(size_t i=0;i<buttons.size();++i){
+  const Button& b=buttons[i];
+  if(x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h)return (int)i;
+ }
+ return -1;
+}
 void ui(FbScreen& fb){
  fb.rect(0,0,fb.w,fb.h,255);
  label(fb,std::max(2,(fb.w-11*18)/2),30,"GOLDEN HERO",3);
  fb.border(gx-5,gy-5,160*scale+10,80*scale+10,0,3);
- for(const auto& b:buttons){
-  fb.border(b.x,b.y,b.w,b.h,0,3);
-  int n=strlen(b.label);int f=std::max(1,std::min(3,b.w/(n*6+4)));
-  label(fb,b.x+(b.w-n*6*f)/2,b.y+(b.h-5*f)/2,b.label,f);
- }
+ for(const auto& b:buttons)draw_button(fb,b,false,false);
  fb.refresh(0,0,fb.w,fb.h,true);
 }
 void lcd_draw(FbScreen& fb,const uint8_t* frame){
@@ -135,9 +146,67 @@ void lcd_draw(FbScreen& fb,const uint8_t* frame){
  }
  fb.refresh(gx,gy,160*scale,80*scale,false);
 }
+int run_controls_test(){
+ std::string error;
+ FbScreen fb;
+ if(!fb.open_fb(error)){std::fprintf(stderr,"Framebuffer: %s\n",error.c_str());return 10;}
+ TouchInput touch;
+ if(!touch.open_touch(error)){std::fprintf(stderr,"Touchscreen: %s\n",error.c_str());fb.close_fb();return 11;}
+ touch.trace_events=true;
+ layout(fb.w,fb.h);
+ ui(fb);
+ label(fb,gx+(160*scale-10*18)/2,gy+28*scale,"TOUCH TEST",3);
+ label(fb,gx+(160*scale-12*12)/2,gy+52*scale,"TAP OR HOLD",2);
+ fb.refresh(gx,gy,160*scale,80*scale,false);
+ std::fprintf(stderr,"Controls test ready: tap or hold any virtual button; EXIT ends test; timeout=45s.\n");
+ const uint64_t started=clock_ms();
+ int active_button=-1;
+ bool exit_requested=false;
+ while(!exit_requested&&clock_ms()-started<45000){
+  TouchPoint point;
+  if(touch.poll_point(fb.w,fb.h,point)){
+   const int hit=point.valid?hit_button(point.x,point.y):-1;
+   if(point.pressed){
+    active_button=hit;
+    if(active_button>=0){
+     const Button& b=buttons[(size_t)active_button];
+     draw_button(fb,b,true);
+     std::fprintf(stderr,"CONTROL DOWN label=%s key=%d x=%d y=%d\n",b.label,b.key,point.x,point.y);
+     if(b.key==-1)exit_requested=true;
+    }else std::fprintf(stderr,"CONTROL DOWN outside x=%d y=%d\n",point.x,point.y);
+   }else if(point.active&&point.moved&&hit!=active_button){
+    if(active_button>=0)draw_button(fb,buttons[(size_t)active_button],false);
+    active_button=hit;
+    if(active_button>=0){
+     const Button& b=buttons[(size_t)active_button];
+     draw_button(fb,b,true);
+     std::fprintf(stderr,"CONTROL DRAG label=%s key=%d x=%d y=%d\n",b.label,b.key,point.x,point.y);
+    }else std::fprintf(stderr,"CONTROL DRAG outside x=%d y=%d\n",point.x,point.y);
+   }
+   if(point.released){
+    if(active_button>=0){
+     const Button& b=buttons[(size_t)active_button];
+     std::fprintf(stderr,"CONTROL UP label=%s key=%d x=%d y=%d\n",b.label,b.key,point.x,point.y);
+     draw_button(fb,b,false);
+    }else std::fprintf(stderr,"CONTROL UP outside x=%d y=%d\n",point.x,point.y);
+    active_button=-1;
+   }
+  }
+  usleep(15000);
+ }
+ if(active_button>=0)draw_button(fb,buttons[(size_t)active_button],false);
+ const uint64_t elapsed=clock_ms()-started;
+ std::fprintf(stderr,"Controls test finished: reason=%s elapsed_ms=%llu events=%lu taps=%lu\n",
+  exit_requested?"EXIT button":"45-second timeout",(unsigned long long)elapsed,
+  touch.event_count,touch.tap_count);
+ touch.close_touch();
+ fb.close_fb();
+ return 0;
+}
+
 void help(){
  std::puts("Golden Hero for KPW1 [DEVELOPMENT BUILD]\n"
-           "Usage: golden_hero [--display-test] [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
+           "Usage: golden_hero [--display-test] [--controls-test] [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
            "ROM files: roms/obj_lu.bin and roms/nc1020.fls\n"
            "Needs /dev/fb0 and an accessible /dev/input/eventN touchscreen.\n"
            "Do NOT run on a PC except --check-files or --help.");
@@ -147,17 +216,19 @@ void help(){
 int run_display_test();
 
 int main(int argc,char** argv){
- bool check=false,display_test=false,swap=false,flipx=false,flipy=false;
+ bool check=false,display_test=false,controls_test=false,swap=false,flipx=false,flipy=false;
  for(int i=1;i<argc;++i){
   if(!strcmp(argv[i],"--help")){help();return 0;}
   if(!strcmp(argv[i],"--check-files"))check=true;
   else if(!strcmp(argv[i],"--display-test"))display_test=true;
+  else if(!strcmp(argv[i],"--controls-test"))controls_test=true;
   else if(!strcmp(argv[i],"--touch-swap-xy"))swap=true;
   else if(!strcmp(argv[i],"--touch-flip-x"))flipx=true;
   else if(!strcmp(argv[i],"--touch-flip-y"))flipy=true;
   else{std::fprintf(stderr,"Unknown argument: %s\n",argv[i]);return 2;}
  }
  if(display_test) return run_display_test();
+ if(controls_test) return run_controls_test();
  bool ok=check_size(filename_rom,0x8000*0x300) && check_size(filename_initial_flash,0x8000*0x20);
  if(check)return ok?0:3;
  if(!ok){std::fprintf(stderr,"Required NC1020 image(s) not found or wrong size; aborting.\n");return 3;}
@@ -184,19 +255,50 @@ int main(int argc,char** argv){
  layout(fb.w,fb.h); ui(fb);
  uint8_t lcd[1600]={};uint8_t previous[1600]={};bool was_drawn=false;
  uint64_t last_frame=0,last_full=clock_ms(),next=clock_ms();
+ int active_button=-1,held_key=-1;
  while(!interrupted){
   const uint32_t slice=25;
   wqx::RunTimeSlice(slice,false);
-  int x,y;
-  if(touch.poll_tap(fb.w,fb.h,x,y)){
-   for(const auto& b:buttons){
-    if(x>=b.x && x<b.x+b.w && y>=b.y && y<b.y+b.h){
+  TouchPoint point;
+  if(touch.poll_point(fb.w,fb.h,point)){
+   const int hit=point.valid?hit_button(point.x,point.y):-1;
+   if(point.pressed){
+    active_button=hit;
+    if(active_button>=0){
+     const Button& b=buttons[(size_t)active_button];
+     draw_button(fb,b,true);
      if(b.key==-1)interrupted=1;
-     else if(b.key==-2){wqx::SaveNC1020();std::fprintf(stderr,"Save requested (NOR + state); check logs for any storage errors.\n");}
-     else {wqx::SetKey((uint8_t)b.key,true);wqx::RunTimeSlice(85,false);
-           wqx::SetKey((uint8_t)b.key,false);}
-     break;
+     else if(b.key==-2){
+      wqx::SaveNC1020();
+      std::fprintf(stderr,"Save requested (NOR + state); check logs for any storage errors.\n");
+     }else{
+      held_key=b.key;
+      wqx::SetKey((uint8_t)held_key,true);
+      std::fprintf(stderr,"Key down: %s (0x%02X)\n",b.label,(unsigned)held_key);
+     }
     }
+   }else if(point.active&&point.moved&&hit!=active_button){
+    if(held_key>=0){wqx::SetKey((uint8_t)held_key,false);held_key=-1;}
+    if(active_button>=0)draw_button(fb,buttons[(size_t)active_button],false);
+    active_button=hit;
+    if(active_button>=0){
+     const Button& b=buttons[(size_t)active_button];
+     draw_button(fb,b,true);
+     if(b.key>=0){
+      held_key=b.key;
+      wqx::SetKey((uint8_t)held_key,true);
+      std::fprintf(stderr,"Key down (drag): %s (0x%02X)\n",b.label,(unsigned)held_key);
+     }
+    }
+   }
+   if(point.released){
+    if(held_key>=0){
+     wqx::SetKey((uint8_t)held_key,false);
+     std::fprintf(stderr,"Key up (0x%02X)\n",(unsigned)held_key);
+     held_key=-1;
+    }
+    if(active_button>=0)draw_button(fb,buttons[(size_t)active_button],false);
+    active_button=-1;
    }
   }
   uint64_t now=clock_ms();
@@ -212,6 +314,7 @@ int main(int argc,char** argv){
   if(next>now)nap_ms((unsigned)std::min<uint64_t>(next-now,50));
   else if(now-next>250)next=now;
  }
+ if(held_key>=0)wqx::SetKey((uint8_t)held_key,false);
  wqx::SaveNC1020();
  touch.close_touch();fb.close_fb();return 0;
 }

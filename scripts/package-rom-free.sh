@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 BIN=build-armel/golden_hero
-OUT=Kindle-Golden-Hero-KPW1-v0.7-ROM-free.zip
+OUT=Kindle-Golden-Hero-KPW1-v0.8-ROM-free.zip
 STAGE=build-rom-free-root
 
 [ -s "$BIN" ] || { echo "Missing ARM binary. Run scripts/build-armel.sh first." >&2; exit 2; }
@@ -18,12 +18,14 @@ if readelf -d "$BIN" | grep -q 'libSDL'; then
 fi
 
 rm -rf "$STAGE"
-mkdir -p "$STAGE/golden_hero/roms" "$STAGE/golden_hero/data" "$STAGE/golden_hero/logs" "$STAGE/extensions"
+mkdir -p "$STAGE/golden_hero/roms" "$STAGE/golden_hero/data" "$STAGE/golden_hero/logs" "$STAGE/extensions" "$STAGE/golden_hero_diagnostics"
 cp "$BIN" "$STAGE/golden_hero/golden_hero"
 cp roms/READ_ME.txt "$STAGE/golden_hero/roms/"
 cp data/READ_ME.txt "$STAGE/golden_hero/data/"
 cp README_中文.md "$STAGE/golden_hero/"
 cp -R kual/extensions/golden_hero "$STAGE/extensions/"
+cp -R kual/extensions/GoldenHeroFullscreen "$STAGE/extensions/"
+cp kual/golden_hero_diagnostics/raw-touch.lua "$STAGE/golden_hero_diagnostics/"
 
 python3 - "$STAGE" "$OUT" <<'PY'
 from pathlib import Path
@@ -39,7 +41,11 @@ with ZipFile(output) as archive:
     assert 'golden_hero/golden_hero' in names
     assert 'extensions/golden_hero/menu.json' in names
     assert 'extensions/golden_hero/display-test.sh' in names
+    assert 'extensions/GoldenHeroFullscreen/guarded-test.sh' in names
+    assert 'extensions/GoldenHeroFullscreen/test-controls.sh' in names
+    assert 'golden_hero_diagnostics/raw-touch.lua' in names
     assert not any(name.endswith(('obj_lu.bin','nc1020.fls', 'nc1020.sts')) for name in names)
     assert archive.getinfo('golden_hero/golden_hero').external_attr >> 16 & 0o111
+    assert archive.getinfo('extensions/GoldenHeroFullscreen/test-controls.sh').external_attr >> 16 & 0o111
 print(f'Created {output} ({output.stat().st_size:,} bytes) without game/firmware images.')
 PY

@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.8 (2026-11-08)
+- Use the confirmed KPW1 cyttsp touch coordinates directly (758×1024, no axis swap or flips).
+- Add SYN_REPORT-based touch state transitions: press, move, release, and mapped coordinates.
+- Hold the corresponding NC1020 SetKey state for the entire finger contact; release it on lift or when dragging into another zone. This matches the upstream SDL key-down/key-up model.
+- Add a ROM-free `--controls-test` mode using the exact same virtual-button hitboxes as the game UI; tap/hold/drag feedback is shown and logged.
+- Add a protected KUAL fullscreen test entry reusing the proven v0.7 65-second watchdog, Pillow hide/show bridge, and Awesome STOP/CONT handoff. It does not stop Xorg/framework or modify WordScreen.
+- Add host regression tests for touch press/move/release packet parsing and ensure the controls test bypasses ROM validation.
+- The game itself still requires user-supplied legally usable NC1020 images; game input and save behavior remain unverified on hardware until those images are available.
+
 ## v0.3 — KPW1 device check and toolchain targeting
 
 - Target the `kindle5` koxtoolchain family (Kindle 4 / Touch / PW1), not PW2/PW3 targets.

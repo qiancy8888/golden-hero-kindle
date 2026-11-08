@@ -1,6 +1,27 @@
-# Kindle《黄金英雄坛说》KPW1 移植工程 v0.7
+# Kindle《黄金英雄坛说》KPW1 移植工程 v0.8
 
-> v0.6 已能通过 GitHub Actions 构建 **无 ROM 的 KUAL 可安装测试包**（包含 ARM 游戏程序与墨水屏/触摸诊断入口），但暂时不能直接游玩《黄金英雄坛说》。游戏 ROM/Flash 镜像不随项目提供。
+> v0.8 已能通过 GitHub Actions 构建 **无 ROM 的 KUAL 可安装测试包**，包含 KPW1 ARM 程序、全屏保护测试入口和触摸按键交互测试。它仍不是可直接游玩的游戏包：游戏 ROM/Flash 镜像不随项目提供。
+
+## v0.8 触摸交互测试与长按支持
+
+实机已确认触摸标记准确落在手指点击的位置，坐标映射固定为 X=0–758、Y=0–1024，不交换轴、不翻转。
+
+本版将输入读取改为按 Linux input 的 SYN_REPORT 分组，分别识别按下、移动和释放。游戏运行时，手指按住方向键会持续保持 NC1020 的 SetKey 按下状态，松开时释放；拖动到另一个按键区域时，会先释放旧键再按下新键。SAVE 只在首次按下时执行，EXIT 在按下时退出。
+
+新增 `--controls-test`，不需要 ROM。它使用与正式游戏相同的虚拟按键布局，显示按键按下状态，并记录 DOWN / DRAG / UP、按键名称、NC1020 key code 和屏幕坐标。
+
+### v0.8 安装与测试
+
+1. 从最新成功的 GitHub Actions 构建下载 `golden-hero-kpw1-v0.8-rom-free` artifact，并解压外层 ZIP。
+2. 将其中的 `Kindle-Golden-Hero-KPW1-v0.8-ROM-free.zip` 解压到 Kindle USB 根目录，合并 `extensions/`，不要删除已有 WordScreen 文件。
+3. 安全弹出 Kindle，打开 KUAL → **Golden Hero KPW1 Fullscreen Test** → **触摸按键操作测试（45秒，自动恢复）**。
+4. 按住方向键约 2–3 秒，再松开；观察按键是否变灰/恢复。再试 OK、BACK、MENU 和 EXIT。
+5. EXIT 可提前结束；否则测试 60 秒后自动退出。65 秒独立 watchdog 会恢复 Awesome 和 Kindle 状态栏。
+6. 日志位于 `golden_hero/logs/fullscreen-v0.8-controls.log`，请上传给我。
+
+全屏保护流程沿用已在 PW1 5.6.1.1 上验证的 v0.7 流程：检查固件和 `mxc_epdc_fb`，启动 65 秒恢复 watchdog，使用 Pillow nativeBridge 隐藏状态栏，暂停 Awesome（不停止 Xorg 或 framework），运行测试后恢复 Awesome 和状态栏。不会修改 WordScreen。
+
+注意：本版只验证按键区域、按下/拖动/松开事件和按键映射日志；尚未接入真实游戏 ROM，因此不能验证人物在游戏中移动或战斗。
 
 ## v0.7 增强诊断：处理只有 TOP 残留的问题
 
