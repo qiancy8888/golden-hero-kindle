@@ -22,6 +22,8 @@ else:
                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE).returncode
 
         assert call('--check-files') == 3, 'Missing default ROM files must fail'
+        assert call() == 20, 'Unprotected game launch must fail closed'
+        assert call('--safe-game-test') == 3, 'Missing image files must fail in safe game mode'
         for flag in ('--display-test', '--controls-test', '--ui-test', '--demo-test'):
             assert call(flag) == 10, f'{flag} must bypass ROM requirement and fail only on missing host fb0'
 

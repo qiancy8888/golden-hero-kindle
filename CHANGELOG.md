@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.9.3 (2026-11-08) — KPW1 reboot safety hotfix
+- Immediately disable all unprotected persistent game launches after the user reported a genuine Kindle system reboot on MAIN.
+- Route the KUAL game launcher through the proven protected fullscreen wrapper and a single-owner /tmp lock.
+- Add a strictly 30-second safe game session: start fresh from user-supplied ROM/NOR, do not load any existing saved state or write any state/Flash on SAVE/EXIT/timeout.
+- Disable MAIN and SAVE while diagnosing the reboot; GAME, D-pad and OK remain available.
+- Reduce the real emulator LCD refresh rate from ~5.5 updates/s to at most ~0.9/s.
+- Restore the pre-test framebuffer as verified in v0.8.1; resume Awesome and Pillow after exit.
+- Add a child process watchdog (TERM at 45 seconds, KILL 3 seconds later) alongside the existing independent Awesome/Pillow restoration fallback at 65 seconds.
+- Previous logs show overlapping start lines and duplicate key events, suggesting concurrent emulator processes; this is not yet confirmed as the cause of the system reboot.
+- Investigate persistence only after a safe session is successfully verified on physical hardware.
+
+
 ## v0.9.2 (2026-11-08)
 - Move NC1020 ROM and initial NOR Flash lookup to `GOLDEN_HERO_PRIVATE_DIR/roms`; KUAL sets this to `/mnt/us/documents/GoldenHeroPrivate`.
 - Move mutable NOR Flash and emulator state to the private sibling `data/` directory, preserving the initial image as read-only input.

@@ -361,7 +361,7 @@ int run_demo_test(){return run_touch_test(true,true);}
 
 void help(){
  std::puts("Golden Hero for KPW1 [DEVELOPMENT BUILD]\n"
-           "Usage: golden_hero [--display-test] [--controls-test] [--ui-test] [--demo-test] [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
+           "Usage: golden_hero [--display-test] [--controls-test] [--ui-test] [--demo-test] [--safe-game-test] [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
            "ROM files: $GOLDEN_HERO_PRIVATE_DIR/roms/obj_lu.bin and nc1020.fls\n"
            "KUAL sets GOLDEN_HERO_PRIVATE_DIR to /mnt/us/documents/GoldenHeroPrivate.\n"
            "Needs /dev/fb0 and an accessible /dev/input/eventN touchscreen.\n"
@@ -372,7 +372,7 @@ void help(){
 int run_display_test();
 
 int main(int argc,char** argv){
- bool check=false,display_test=false,controls_test=false,ui_test=false,demo_test=false,swap=false,flipx=false,flipy=false;
+ bool check=false,display_test=false,controls_test=false,ui_test=false,demo_test=false,safe_game_test=false,swap=false,flipx=false,flipy=false;
  for(int i=1;i<argc;++i){
   if(!strcmp(argv[i],"--help")){help();return 0;}
   if(!strcmp(argv[i],"--check-files"))check=true;
@@ -380,6 +380,7 @@ int main(int argc,char** argv){
   else if(!strcmp(argv[i],"--controls-test"))controls_test=true;
   else if(!strcmp(argv[i],"--ui-test"))ui_test=true;
   else if(!strcmp(argv[i],"--demo-test"))demo_test=true;
+  else if(!strcmp(argv[i],"--safe-game-test"))safe_game_test=true;
   else if(!strcmp(argv[i],"--touch-swap-xy"))swap=true;
   else if(!strcmp(argv[i],"--touch-flip-x"))flipx=true;
   else if(!strcmp(argv[i],"--touch-flip-y"))flipy=true;
@@ -393,18 +394,16 @@ int main(int argc,char** argv){
  std::fprintf(stderr,"Private NC1020 data directory: %s\n",private_root.c_str());
  bool ok=check_size(filename_rom,0x8000*0x300) && check_size(filename_initial_flash,0x8000*0x20);
  if(check)return ok?0:3;
+ if(!safe_game_test) {
+  std::fprintf(stderr,"ERROR: unprotected persistent game mode is disabled after KPW1 reboot report. Use the guarded KUAL safe-game test.\n");
+  return 20;
+ }
  if(!ok){std::fprintf(stderr,"Required NC1020 image(s) not found or wrong size; aborting.\n");return 3;}
- // Preserve supplied initial flash. All game changes go to data/nc1020.fls.
- if(!ensure_directory(data_dir)){
-  std::fprintf(stderr,"Cannot create private data directory: %s\n",data_dir.c_str());return 4;
- }
- struct stat flash_info{};
- if(stat(filename_flash.c_str(),&flash_info)!=0){
-  if(!copy_file(filename_initial_flash,filename_flash)){
-   std::fprintf(stderr,"Cannot initialize data/nc1020.fls\n");return 4;
-  }
- }
- if(!check_size(filename_flash,0x8000*0x20))return 4;
+ // Safe game test: always load pristine user-provided ROM and NOR images.
+ // Never read a possibly corrupted previous saved state or write any save.
+ filename_flash=filename_initial_flash;
+ filename_state="/tmp/golden-hero-no-existing-state-"+std::to_string((long long)getpid())+".sts";
+ std::fprintf(stderr,"SAFE GAME TEST: 30s limit, MAIN/SAVE disabled, no persistent reads/writes, NOR and state NOT saved.\n");
  std::signal(SIGINT,on_signal); std::signal(SIGTERM,on_signal);
  wqx::WqxRom rom{filename_rom,filename_flash,filename_state};
  wqx::Initialize(rom);
@@ -416,11 +415,17 @@ int main(int argc,char** argv){
   std::fprintf(stderr,"Touchscreen: %s\n",error.c_str());fb.close_fb();return 6;
  }
  touch.swap_xy=swap;touch.flip_x=flipx;touch.flip_y=flipy;
+ // Match the v0.8.1 proven EXIT recovery path in the real emulator too.
+ const size_t display_bytes=(size_t)fb.stride*(size_t)fb.h;
+ unsigned char* old_visible=fb.data+(size_t)fb.stride*(size_t)fb.var.yoffset;
+ const std::vector<unsigned char> old_frame(old_visible,old_visible+display_bytes);
+ std::fprintf(stderr,"SAFE GAME TEST original framebuffer snapshot: %zu bytes\n",display_bytes);
  layout(fb.w,fb.h); ui(fb);
  uint8_t lcd[1600]={};uint8_t previous[1600]={};bool was_drawn=false;
  uint64_t last_frame=0,last_full=clock_ms(),next=clock_ms();
+ const uint64_t started=clock_ms();
  int active_button=-1,held_key=-1;
- while(!interrupted){
+ while(!interrupted && clock_ms()-started<30000){
   const uint32_t slice=25;
   wqx::RunTimeSlice(slice,false);
   TouchPoint point;
@@ -431,10 +436,9 @@ int main(int argc,char** argv){
     if(active_button>=0){
      const Button& b=buttons[(size_t)active_button];
      draw_button(fb,b,true);
-     if(b.key==-1)interrupted=1;
-     else if(b.key==-2){
-      wqx::SaveNC1020();
-      std::fprintf(stderr,"Save requested (NOR + state); check logs for any storage errors.\n");
+     if(b.key==-1){interrupted=1;std::fprintf(stderr,"SAFE GAME TEST: EXIT requested.\n");}
+     else if(b.key==-2 || b.key==0x08){
+      std::fprintf(stderr,"SAFE GAME TEST: %s is disabled to avoid reset and persistent writes.\n",b.label);
      }else{
       held_key=b.key;
       wqx::SetKey((uint8_t)held_key,true);
@@ -448,10 +452,12 @@ int main(int argc,char** argv){
     if(active_button>=0){
      const Button& b=buttons[(size_t)active_button];
      draw_button(fb,b,true);
-     if(b.key>=0){
+     if(b.key>=0 && b.key!=0x08){
       held_key=b.key;
       wqx::SetKey((uint8_t)held_key,true);
       std::fprintf(stderr,"Key down (drag): %s (0x%02X)\n",b.label,(unsigned)held_key);
+     }else if(b.key==0x08){
+      std::fprintf(stderr,"SAFE GAME TEST: MAIN drag ignored.\n");
      }
     }
    }
@@ -466,7 +472,8 @@ int main(int argc,char** argv){
    }
   }
   uint64_t now=clock_ms();
-  if(now-last_frame>=180){
+  // Throttle EPDC submissions: avoid ~5.5 updates/second seen in reboot log.
+  if(now-last_frame>=1100){
    if(wqx::CopyLcdBuffer(lcd) && (!was_drawn||memcmp(lcd,previous,1600)!=0)){
     if(was_drawn)lcd_draw_diff(fb,previous,lcd);
     else lcd_draw(fb,lcd);
@@ -481,6 +488,11 @@ int main(int argc,char** argv){
   else if(now-next>250)next=now;
  }
  if(held_key>=0)wqx::SetKey((uint8_t)held_key,false);
- wqx::SaveNC1020();
- touch.close_touch();fb.close_fb();return 0;
+ std::fprintf(stderr,"SAFE GAME TEST exit: reason=%s elapsed_ms=%llu (never saving flash/state)\n",
+  interrupted?"EXIT/signal":"30-second timeout",(unsigned long long)(clock_ms()-started));
+ touch.close_touch();
+ std::memcpy(old_visible,old_frame.data(),display_bytes);
+ const bool screen_restored=fb.refresh(0,0,fb.w,fb.h,true);
+ std::fprintf(stderr,"SAFE GAME TEST framebuffer restore: %s\n",screen_restored?"OK":"FAILED");
+ fb.close_fb();return screen_restored?0:12;
 }

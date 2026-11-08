@@ -2,7 +2,7 @@
 
 An experimental port of the NC1020 emulator core to the first-generation Kindle Paperwhite. The goal is to run **Golden Hero Tan Shuo (黄金英雄坛说)** on the KPW1 e-ink display with a KUAL launcher and touchscreen controls.
 
-**Status: v0.9.2 private external ROM/data loading.** KPW1 display and touch coordinates have been confirmed on hardware. v0.9.1 adds a ROM-free miniature town test; v0.9.2 moves user-provided NC1020 images and mutable saves completely outside the app installation directory. The KUAL launcher sets `GOLDEN_HERO_PRIVATE_DIR` to `/mnt/us/documents/GoldenHeroPrivate`. GitHub Actions and install ZIPs never fetch, bundle, or distribute game images.
+**Status: v0.9.3 reboot-safety hotfix.** KPW1 display and touch coordinates have been confirmed on hardware. v0.9.1 adds a ROM-free miniature town test; v0.9.2 moves user-provided NC1020 images and mutable saves completely outside the app installation directory. The KUAL launcher sets `GOLDEN_HERO_PRIVATE_DIR` to `/mnt/us/documents/GoldenHeroPrivate`. After the report of an actual KPW1 OS reboot, unprotected persistent launches are disabled. The game menu now runs a 30s, no-save, no-MAIN safe diagnostic under a single-owner guarded fullscreen wrapper. GitHub Actions and install ZIPs never fetch, bundle, or distribute game images.
 
 [简体中文说明](README_中文.md) · [Changelog](CHANGELOG.md)
 

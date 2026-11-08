@@ -1,14 +1,9 @@
 {
   "items": [
     {
-      "name": "黄金英雄坛说（读取个人私有镜像）",
+      "name": "NC1020 安全试运行（30秒，无存档；MAIN禁用）",
       "priority": 0,
       "action": "./launch.sh"
-    },
-    {
-      "name": "屏幕及触摸诊断（无需 ROM，75 秒自动退出）",
-      "priority": 1,
-      "action": "./display-test.sh"
     },
     {
       "name": "KPW1 设备检测（生成报告）",

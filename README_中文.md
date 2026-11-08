@@ -1,6 +1,22 @@
-# Kindle《黄金英雄坛说》KPW1 移植工程 v0.9.2
+# Kindle《黄金英雄坛说》KPW1 移植工程 v0.9.3
 
-> v0.9.2 将 ROM/Flash 与程序安装目录彻底分离：KUAL 固定从 Kindle 的 `documents/GoldenHeroPrivate/` 读取个人配置的镜像，并把可变存档写入同目录下的 `data/`。GitHub Actions 和安装 ZIP 均不包含、下载或分发游戏数据。
+> v0.9.3 是 Kindle 系统重启后的安全热修复。正式持久化游戏模式被禁用；KUAL 只允许在受保护的全屏环境中执行最长 30 秒的无存档、无 MAIN 的真实 NC1020 试运行。现有个人 ROM 和 data 目录保留不变。
+
+## v0.9.3 Kindle 系统重启安全修复（先不要连续测试）
+
+用户实机报告：在 v0.9.2 正式游戏入口按下 MAIN (0x08) 后，Kindle 整个系统重启，出现 Kindle 原生启动画面。旧日志重复出现 emulator 初始化消息、重复 MAIN 按键，且末尾有 `NC1020: NOR flash could not be safely saved`。多个并发模拟器、未暂停 Awesome 的 framebuffer 写入、保存失败和刷新压力均值得排查，但没有足够证据断言重启的唯一根因。
+
+本版采取主动安全措施：
+1. **关闭**未受保护的直接游戏启动：无参数运行程序将返回 20，不接触 ROM/屏幕。
+2. KUAL 的游戏菜单改名为 **NC1020 安全试运行（30秒，无存档；MAIN禁用）**，统一使用已验证的 fullscreen guard，暂停 Awesome、隐藏 Pillow 并在退出时恢复。
+3. 通过 `/tmp/golden-hero-kpw1-session.lock` 原子目录阻止多个受保护实例同时抢占屏幕。
+4. 安全模式每次从只读 ROM 和原始 Flash 初始化，不读取旧 `data/nc1020.sts`，也不向 `data/` 或 ROM 目录写入存档。SAVE 和 MAIN 均被屏蔽。
+5. LCD 刷新从每 180ms 一次降到每 1100ms 一次（有变化时），安全测试 30 秒自动退出；外层 45 秒子进程终止保护和 65 秒 Awesome 恢复保护仍有效。
+6. 和 v0.8.1 一样，在退出时恢复原始 framebuffer，日志位于 `/mnt/us/golden_hero/logs/fullscreen-v0.9.3-game.log`。
+
+**安装前先从 Kindle 备份 `documents/GoldenHeroPrivate/data/` 整个目录（如果存在），不要删除已损坏或尚待分析的存档。** 更新 v0.9.3 安装包时只合并程序及 KUAL 文件，个人 `documents/GoldenHeroPrivate/roms/` 保留原样。首次安全测试只点击 GAME、OK、BACK 和 EXIT；不要尝试重启键 MAIN，安全版该键已禁用。
+
+这版是故障隔离的诊断构建，**不保证再也不会导致系统重启**。若仍重启，停止使用真实 ROM 模式，优先取 Kindle 系统日志/电源记录，并保留 `fullscreen-v0.9.3-game.log` 和 `launcher.log`。无 ROM 测试也已加入单实例锁，但不应单凭此判断原因已经找到。
 
 ## v0.9.1 可行走小镇交互测试（不需要 ROM）
 
