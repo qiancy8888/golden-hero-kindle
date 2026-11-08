@@ -96,6 +96,14 @@ bool TouchInput::poll_tap(int width,int height,int& x,int& y){
  for(;;){
   const ssize_t n=read(fd,&ev,sizeof(ev));
   if(n==(ssize_t)sizeof(ev)){
+   ++event_count;
+   if(ev.type==EV_ABS)++abs_count;
+   if(ev.type==EV_KEY)++key_count;
+   if(ev.type==EV_SYN)++syn_count;
+   if(trace_events && event_count<=160){
+    std::fprintf(stderr,"Touch raw #%lu: type=%u code=%u value=%d pressed=%d raw=(%d,%d)\n",
+      event_count,ev.type,ev.code,ev.value,(int)pressed,raw_x,raw_y);
+   }
    if(ev.type==EV_ABS){
     if(ev.code==ABS_X||ev.code==ABS_MT_POSITION_X){if(ev.value>=0)raw_x=ev.value;}
     if(ev.code==ABS_Y||ev.code==ABS_MT_POSITION_Y){if(ev.value>=0)raw_y=ev.value;}
@@ -121,5 +129,6 @@ bool TouchInput::poll_tap(int width,int height,int& x,int& y){
  x=(int)std::round(nx*(width-1));
  y=(int)std::round(ny*(height-1));
  raw_x=raw_y=-1;pressed=false;
+ ++tap_count;
  return true;
 }

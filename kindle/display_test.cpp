@@ -1,6 +1,7 @@
 #include "fb.h"
 #include "touch.h"
 #include <algorithm>
+#include <cstdint>
 #include <csignal>
 #include <cstdio>
 #include <cstring>
@@ -51,7 +52,7 @@ void print_text(FbScreen& fb,int x,int y,const char* s,int scale){
 }
 
 int run_display_test() {
-    std::fprintf(stderr,"Golden Hero KPW1: ROM-free display/touch test (max 40 seconds).\n");
+    std::fprintf(stderr,"Golden Hero KPW1: ROM-free display/touch diagnostic (max 75 seconds).\n");
     std::string error;
     FbScreen fb;
     if(!fb.open_fb(error)) {
@@ -64,6 +65,7 @@ int run_display_test() {
     const std::vector<unsigned char> backup(start,start+region);
     TouchInput touch;
     const bool touch_ready=touch.open_touch(error);
+    touch.trace_events=true;
     if(!touch_ready)std::fprintf(stderr,"Touch not accessible: %s; automatic exit still works.\n",error.c_str());
     fb.rect(0,0,fb.w,fb.h,255);
     fb.rect(0,0,fb.w,7,0); // physical top edge marker
@@ -79,24 +81,71 @@ int run_display_test() {
     const int ex=140, ey=fb.h-170, ew=fb.w-280, eh=105;
     fb.border(ex,ey,ew,eh,0,6);
     print_text(fb,ex+(ew-4*6*5)/2,ey+(eh-6*5)/2,"EXIT",5);
-    if(!fb.refresh(0,0,fb.w,fb.h,true)){
-        std::fprintf(stderr,"Initial MXCFB refresh failed.\n");
-    }
+    const bool initial_refresh=fb.refresh(0,0,fb.w,fb.h,true);
+    std::fprintf(stderr,"Initial full-screen MXCFB refresh: %s\n",initial_refresh?"OK":"FAILED");
     const uint64_t starttime=monotonic_ms();
+
+    struct PixelProbe {int x,y;const char* label;uint8_t expected;};
+    const auto pixel_at=[&fb](int x,int y)->uint8_t{
+        const size_t addr=((size_t)y+(size_t)fb.var.yoffset)*(size_t)fb.stride+
+                          ((size_t)x+(size_t)fb.var.xoffset)*(size_t)(fb.depth/8);
+        return fb.data[addr];
+    };
+    PixelProbe probes[]={
+      {3,3,"top-border",0},
+      {fb.w/2,fb.h-4,"bottom-white",255},
+      {60,260,"gray-0",0},
+      {145,260,"gray-1",0},
+      {310,260,"gray-3",0},
+      {fb.w/2,870,"exit-region",0}
+    };
+    for(auto& p:probes)p.expected=pixel_at(p.x,p.y);
+    std::fprintf(stderr,"Drawn framebuffer samples: ");
+    for(const auto& p:probes)std::fprintf(stderr,"%s=%u ",p.label,(unsigned)p.expected);
+    std::fprintf(stderr,"\n");
+    // Re-read the mmap every 2.5 seconds. If the pixels change, another
+    // process may be repainting the framebuffer (e.g. Kindle's X11 UI).
+    uint64_t last_probe=starttime;
+    unsigned sample_changes=0;
+    unsigned samples_checked=0;
+    bool exited_by_touch=false;
     int rc=0;
     stopped=0;
     std::signal(SIGINT,stop_test);
     std::signal(SIGTERM,stop_test);
-    while(!stopped && monotonic_ms()-starttime<40000) {
+    while(!stopped && monotonic_ms()-starttime<75000) {
         int x=0,y=0;
         if(touch_ready && touch.poll_tap(fb.w,fb.h,x,y)){
             std::fprintf(stderr,"Touch x=%d y=%d\n",x,y);
-            if(x>=ex&&x<ex+ew&&y>=ey&&y<ey+eh)break;
+            if(x>=ex&&x<ex+ew&&y>=ey&&y<ey+eh){exited_by_touch=true;break;}
             fb.rect(x-14,y-14,29,29,0);
             fb.refresh(std::max(0,x-14),std::max(0,y-14),29,29,false);
         }
+        const uint64_t now=monotonic_ms();
+        if(now-last_probe>=2500){
+            ++samples_checked;
+            unsigned mismatches=0;
+            for(const auto& p:probes){
+                const uint8_t current=pixel_at(p.x,p.y);
+                if(current!=p.expected){
+                    ++mismatches;
+                    std::fprintf(stderr,"Framebuffer sample changed: %s old=%u new=%u\n",
+                                 p.label,(unsigned)p.expected,(unsigned)current);
+                }
+            }
+            if(mismatches)++sample_changes;
+            std::fprintf(stderr,"Elapsed=%llu ms, mismatched probes=%u/%zu, input events=%lu (ABS=%lu KEY=%lu SYN=%lu), completed taps=%lu\n",
+                         (unsigned long long)(now-starttime),mismatches,sizeof(probes)/sizeof(probes[0]),
+                         touch.event_count,touch.abs_count,touch.key_count,touch.syn_count,touch.tap_count);
+            last_probe=now;
+        }
         usleep(35000);
     }
+    std::fprintf(stderr,"End reason=%s, elapsed=%llu ms, event_count=%lu abs=%lu key=%lu syn=%lu taps=%lu, pixel sample change intervals=%u/%u\n",
+                 stopped?"signal":exited_by_touch?"EXIT-tap":"timeout",
+                 (unsigned long long)(monotonic_ms()-starttime),
+                 touch.event_count,touch.abs_count,touch.key_count,touch.syn_count,touch.tap_count,
+                 sample_changes,samples_checked);
     std::memcpy(start,backup.data(),region);
     if(!fb.refresh(0,0,fb.w,fb.h,true)){
         std::fprintf(stderr,"Warning: display restore refresh failed.\n");

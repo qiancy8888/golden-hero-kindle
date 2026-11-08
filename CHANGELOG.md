@@ -20,6 +20,14 @@
 - Still source/probe only; no playable ARM binary or game ROM is included.
 
 
+## v0.7 (2026-11-08)
+
+- Investigate KPW1 user photo: Kindle native library visible, TOP ghosting; v0.6 logs alone did not establish full-screen render success.
+- Increase no-ROM screen test timeout from 40 to 75 seconds for easier photo capture during test.
+- Log actual exit reason/elapsed time and count raw touchscreen events (EV_ABS, EV_KEY, EV_SYN), limited raw trace to 160 events.
+- Sample selected framebuffer pixels every 2.5 seconds to detect potential overwrites by other processes such as Xorg.
+- Continue to restore previous framebuffer on normal exit; do not stop Xorg or powerd or modify WordScreen.
+
 ## v0.6 (2026-11-08)
 - Added a ROM-free `--display-test` mode that opens the real framebuffer, displays orientation and grayscale calibration, prints touch coordinates, and exits after 40 seconds or by tapping EXIT.
 - Display test copies and restores the visible framebuffer on normal exit, and does not access NC1020 ROM or save files.

@@ -6,7 +6,7 @@
       "action": "./launch.sh"
     },
     {
-      "name": "屏幕及触摸测试（无需 ROM，40 秒自动退出）",
+      "name": "屏幕及触摸诊断（无需 ROM，75 秒自动退出）",
       "priority": 1,
       "action": "./display-test.sh"
     },
