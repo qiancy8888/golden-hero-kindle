@@ -4,7 +4,7 @@ An experimental port of the NC1020 emulator core to the first-generation Kindle 
 
 **Status: standalone research branch (no new device installer yet).** This branch investigates a Kindle-native game frontend with no visible NC1020 launcher. The upstream repository contains the NC1020 emulator source, not the Golden Hero game's C/C++ source. The feasible near-term route is to retain the minimum WQX CPU/device runtime while replacing the frontend and researching the direct game-launch path; this is not yet a native recompile of the game. KPW1 display and touch coordinates have been confirmed on hardware. v0.9.1 adds a ROM-free miniature town test; v0.9.2 moves user-provided NC1020 images and mutable saves completely outside the app installation directory. The KUAL launcher sets `GOLDEN_HERO_PRIVATE_DIR` to `/mnt/us/documents/GoldenHeroPrivate`. After the report of an actual KPW1 OS reboot, unprotected persistent launches remain disabled. The protected 30s diagnostic still waits 6s for NC1020 firmware startup, sends F11/GAME for 300ms, then waits 750ms before drawing the first LCD frame. The touch UI removes X/Shift-X and Y/Shift-Y and enlarges the 160x80 LCD to 736x368 on the 758px-wide KPW1. MAIN and SAVE remain disabled in the protected test; no persistent save data is loaded or written. Direct-to-game boot remains unverified on the physical Kindle. GitHub Actions and install ZIPs never fetch, bundle, or distribute game images.
 
-[简体中文说明](README_中文.md) · [Changelog](CHANGELOG.md)
+[简体中文说明](README_中文.md) · [Changelog](CHANGELOG.md) · [Standalone research notes](docs/STANDALONE-RESEARCH.md)
 
 ## Target device
 

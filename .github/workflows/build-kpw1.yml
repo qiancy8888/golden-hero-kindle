@@ -3,12 +3,13 @@ name: Build Golden Hero for Kindle PW1
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, standalone-prototype]
     paths:
       - 'kindle/**'
       - 'scripts/**'
       - 'tests/**'
       - 'README*'
+      - 'docs/**'
       - 'CHANGELOG.md'
       - 'kual/**'
       - 'CMakeLists.txt'
@@ -50,8 +51,8 @@ jobs:
       - name: Upload ROM-free KUAL ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: golden-hero-kpw1-v0.9.6-rom-free-${{ github.sha }}
-          path: Kindle-Golden-Hero-KPW1-v0.9.6-ROM-free.zip
+          name: golden-hero-kpw1-standalone-research-${{ github.sha }}
+          path: Kindle-Golden-Hero-KPW1-Standalone-Research-ROM-free.zip
           if-no-files-found: error
           retention-days: 30
 
