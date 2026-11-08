@@ -10,7 +10,7 @@ source = (project / 'kindle/main.cpp').read_text(encoding='utf-8')
 assert 'AUTO-GAME: F11 key-down (0x0E)' in source, 'Automatic F11 must remain enabled'
 actions = source.split('const struct {int key;const char* label;} actions[]={', 1)[1].split('};', 1)[0]
 assert '"GAME"' not in actions and '"MAIN"' not in actions, 'GAME and MAIN must not be touch controls'
-assert '{-3,"X (disabled)"}' in actions, 'X must be isolated during reboot diagnosis'
+assert '"X (disabled)"' not in actions, 'X touch control must be removed in v0.9.6'
 assert 'for(int i=0;i<240;++i) wqx::RunTimeSlice(25,false);' in source, '6-second boot delay must remain'
 assert 'caught_signal' in source, 'Actual external signal must be logged'
 assert 'b.key==-2 || b.key==-3 || b.key==0x08' in source, 'X/MAIN/SAVE must remain disabled'
