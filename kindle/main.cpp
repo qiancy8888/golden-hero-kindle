@@ -17,7 +17,8 @@
 
 namespace {
 volatile sig_atomic_t interrupted=0;
-void on_signal(int) {interrupted=1;}
+volatile sig_atomic_t caught_signal=0;
+void on_signal(int sig) {caught_signal=sig;interrupted=1;}
 uint64_t clock_ms() {struct timespec ts{};clock_gettime(CLOCK_MONOTONIC,&ts);return uint64_t(ts.tv_sec)*1000+ts.tv_nsec/1000000;}
 void nap_ms(unsigned ms) {usleep(ms*1000);}
 
@@ -89,7 +90,7 @@ void layout(int w,int h){
   const struct {int key;const char* label;} actions[]={
     {0x10,"FLY"},{0x13,"MENU"},
     {0x1D,"OK"},{0x3B,"BACK"},
-    {0x31,"X"},{0x25,"Y"},
+    {-3,"X (disabled)"},{0x25,"Y"},
     {0x37,"PGUP"},{0x1E,"PGDN"},
     {-2,"SAVE"},{-1,"EXIT"}
   };
@@ -410,13 +411,14 @@ int main(int argc,char** argv){
  wqx::LoadNC1020();
  // Let NC1020 firmware finish booting, then synthesize the upstream F11/GAME key.
  // This happens before the first LCD copy, so the home screen is never drawn.
- std::fprintf(stderr,"AUTO-GAME: boot settling for 1800ms before F11.\\n");
- for(int i=0;i<72;++i) wqx::RunTimeSlice(25,false);
+ std::fprintf(stderr,"AUTO-GAME: boot settling for 6000ms before F11.\\n");
+ for(int i=0;i<240;++i) wqx::RunTimeSlice(25,false);
+ std::fprintf(stderr,"AUTO-GAME: F11 key-down (0x0E).\\n");
  wqx::SetKey(0x0E,true);
- for(int i=0;i<5;++i) wqx::RunTimeSlice(25,false);
+ for(int i=0;i<12;++i) wqx::RunTimeSlice(25,false);
  wqx::SetKey(0x0E,false);
- std::fprintf(stderr,"AUTO-GAME: sent F11 (0x0E) for 125ms; settling 250ms.\\n");
- for(int i=0;i<10;++i) wqx::RunTimeSlice(25,false);
+ std::fprintf(stderr,"AUTO-GAME: F11 released after 300ms; settling 750ms.\\n");
+ for(int i=0;i<30;++i) wqx::RunTimeSlice(25,false);
  FbScreen fb;std::string error;
  if(!fb.open_fb(error)) {std::fprintf(stderr,"Framebuffer: %s\n",error.c_str());return 5;}
  TouchInput touch;
@@ -453,8 +455,8 @@ int main(int argc,char** argv){
      const Button& b=buttons[(size_t)active_button];
      draw_button(fb,b,true);
      if(b.key==-1){interrupted=1;std::fprintf(stderr,"SAFE GAME TEST: EXIT requested.\n");}
-     else if(b.key==-2 || b.key==0x08){
-      std::fprintf(stderr,"SAFE GAME TEST: %s is disabled to avoid reset and persistent writes.\n",b.label);
+     else if(b.key==-2 || b.key==-3 || b.key==0x08){
+      std::fprintf(stderr,"SAFE GAME TEST: %s is disabled during reboot isolation (SAVE/MAIN/X).\n",b.label);
      }else{
       held_key=b.key;
       wqx::SetKey((uint8_t)held_key,true);
@@ -505,7 +507,8 @@ int main(int argc,char** argv){
  }
  if(held_key>=0)wqx::SetKey((uint8_t)held_key,false);
  std::fprintf(stderr,"SAFE GAME TEST exit: reason=%s elapsed_ms=%llu (never saving flash/state)\n",
-  interrupted?"EXIT/signal":"30-second timeout",(unsigned long long)(clock_ms()-started));
+  interrupted?(caught_signal?"signal":"EXIT requested"):"30-second timeout",(unsigned long long)(clock_ms()-started));
+ if(caught_signal)std::fprintf(stderr,"SAFE GAME TEST caught signal=%d\\n",(int)caught_signal);
  touch.close_touch();
  std::memcpy(old_visible,old_frame.data(),display_bytes);
  const bool screen_restored=fb.refresh(0,0,fb.w,fb.h,true);

@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.9.5 (2026-11-08) — auto-GAME timing and X-key isolation
+- User confirmed the on-screen X control (not Kindle hardware) precedes the Kindle OS reboot.
+- Upstream NC1020 GameShell mapping identifies key 0x31 as Shift-X, not emulator exit or power. Temporarily disable this one key in the diagnostic build to isolate the reboot; restore it after safe testing.
+- Increase NC1020 boot settling from 1.8s to 6.0s before synthetic F11/GAME, increase press duration from 125ms to 300ms, then allow 750ms for the menu transition.
+- Log actual caught signal number separately from user-requested EXIT, to distinguish external process termination from the on-screen EXIT control.
+- Keep the 30s no-save mode, MAIN/SAVE restrictions, single-instance wrapper and framebuffer restoration unchanged.
+- This is a diagnostic hypothesis, not proof that boot timing or X key caused the reported reboot.
+
+
 ## v0.9.4 (2026-11-08) — Direct-to-game boot
 - Let NC1020 firmware run for 1.8s, synthesize upstream F11/GAME (0x0E) for 125ms, then settle for 250ms.
 - Perform automatic F11 before the first LCD copy so the NC1020 home screen is not intentionally rendered.
