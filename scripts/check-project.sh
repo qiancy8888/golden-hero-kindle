@@ -14,6 +14,7 @@ python3 -m json.tool kual/extensions/GoldenHeroFullscreen/menu.json >/dev/null
 python3 -m json.tool kual/device-check/menu.json >/dev/null
 python3 -m py_compile scripts/fetch_upstream.py
 python3 tests/test_upstream_patch.py
+python3 tests/test_debug_snapshot_patch.py
 python3 tests/test_storage_patch.py
 mkdir -p build-tests
 ${CXX:-c++} -std=c++11 -Wall -Wextra -Ikindle tests/test_touch_state.cpp kindle/touch.cpp -o build-tests/test_touch_state

@@ -1,5 +1,12 @@
 # Changelog
 
+## standalone-prototype (research branch)
+- Start a separate branch so the existing KPW1 test build on `main` remains unchanged.
+- Document that the upstream NC1020 repository contains emulator source but not the Golden Hero game's native C/C++ source.
+- Add a read-only CPU/mapper/LCD debug snapshot API at source-fetch/build time; trace PC, reset vector, CPU registers, bank selectors, LCD pointer/hash, opcode bytes and key matrix around startup and F11.
+- Keep ROM/NOR images outside Git and CI artifacts. No direct PC jump or guessed entry point is introduced.
+
+
 ## v0.9.6 (2026-11-08) — enlarged LCD and simplified touch controls
 - Remove the redundant on-screen X (Shift-X, 0x31) and Y (Shift-Y, 0x25) controls; retain FLY, MENU, OK, BACK, PGUP, PGDN, SAVE and EXIT.
 - Replace integer 4x rendering with fractional nearest-neighbour scaling. On the 758px-wide KPW1 display, the 160x80 NC1020 LCD now uses 736x368 pixels instead of 640x320 (about 15% larger in each dimension).

@@ -41,6 +41,31 @@ void configure_storage_paths() {
   filename_state=data_dir+"/nc1020.sts";
 }
 
+
+uint32_t lcd_hash(const uint8_t* frame){
+ uint32_t h=2166136261u;
+ for(int i=0;i<1600;++i){h^=frame[i];h*=16777619u;}
+ return h;
+}
+void trace_wqx(const char* stage){
+ wqx::DebugSnapshot s{};
+ wqx::GetDebugSnapshot(&s);
+ uint8_t frame[1600]={};
+ const bool lcd_ok=wqx::CopyLcdBuffer(frame);
+ std::fprintf(stderr,
+  "WQXTRACE stage=%s PC=%04X RESET=%04X A=%02X X=%02X Y=%02X SP=%02X PS=%02X "
+  "CYC=%u NORBANK=%02X VOL=%02X MEM=%02X IO05=%02X IO06=%02X IO08=%02X "
+  "IO09=%02X IO0B=%02X LCDADDR=%04X SLEEP=%d LCD=%s HASH=%08X OP=",
+  stage,s.pc,s.reset_vector,s.a,s.x,s.y,s.sp,s.ps,s.cycles,s.nor_bank,
+  s.volume_select,s.memory_select,s.io05,s.io06,s.io08,s.io09,s.io0b,
+  (unsigned)s.lcd_addr,(int)s.slept,lcd_ok?"ready":"not-ready",
+  lcd_ok?lcd_hash(frame):0u);
+ for(int i=0;i<8;++i)std::fprintf(stderr,"%02X",s.opcodes[i]);
+ std::fprintf(stderr," KEYS=");
+ for(int i=0;i<8;++i)std::fprintf(stderr,"%02X",s.keypad[i]);
+ std::fprintf(stderr,"\n");
+}
+
 bool check_size(const std::string& name, off_t expected) {
   struct stat st{};
   if(stat(name.c_str(),&st)!=0){std::fprintf(stderr,"Missing %s\n",name.c_str());return false;}
@@ -414,16 +439,20 @@ int main(int argc,char** argv){
  wqx::WqxRom rom{filename_rom,filename_flash,filename_state};
  wqx::Initialize(rom);
  wqx::LoadNC1020();
+ trace_wqx("loaded");
  // Let NC1020 firmware finish booting, then synthesize the upstream F11/GAME key.
  // This happens before the first LCD copy, so the home screen is never drawn.
  std::fprintf(stderr,"AUTO-GAME: boot settling for 6000ms before F11.\\n");
  for(int i=0;i<240;++i) wqx::RunTimeSlice(25,false);
+ trace_wqx("pre-F11");
  std::fprintf(stderr,"AUTO-GAME: F11 key-down (0x0E).\\n");
  wqx::SetKey(0x0E,true);
  for(int i=0;i<12;++i) wqx::RunTimeSlice(25,false);
+ trace_wqx("F11-held");
  wqx::SetKey(0x0E,false);
  std::fprintf(stderr,"AUTO-GAME: F11 released after 300ms; settling 750ms.\\n");
  for(int i=0;i<30;++i) wqx::RunTimeSlice(25,false);
+ trace_wqx("post-F11-settle");
  FbScreen fb;std::string error;
  if(!fb.open_fb(error)) {std::fprintf(stderr,"Framebuffer: %s\n",error.c_str());return 5;}
  TouchInput touch;
@@ -448,6 +477,7 @@ int main(int argc,char** argv){
  uint64_t last_frame=clock_ms(),last_full=clock_ms(),next=clock_ms();
  const uint64_t started=clock_ms();
  int active_button=-1,held_key=-1;
+ uint64_t last_trace=clock_ms();
  while(!interrupted && clock_ms()-started<30000){
   const uint32_t slice=25;
   wqx::RunTimeSlice(slice,false);
@@ -497,6 +527,7 @@ int main(int argc,char** argv){
    }
   }
   uint64_t now=clock_ms();
+  if(now-last_trace>=2000){trace_wqx("runtime");last_trace=now;}
   // Throttle EPDC submissions: avoid ~5.5 updates/second seen in reboot log.
   if(now-last_frame>=1100){
    if(wqx::CopyLcdBuffer(lcd) && (!was_drawn||memcmp(lcd,previous,1600)!=0)){

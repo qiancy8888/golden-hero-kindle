@@ -116,6 +116,62 @@ def patch_safe_storage(data: bytes) -> bytes:
     return data
 
 
+
+def patch_debug_interface(source: bytes, header: bytes):
+    """Expose read-only CPU/mapper/LCD diagnostics for direct-game boot research."""
+    linebreak = b"\r\n" if b"\r\n" in source else b"\n"
+    header_anchor = b"extern void SaveNC1020();"
+    if header.count(header_anchor) != 1:
+        raise ValueError("Could not locate the NC1020 public API insertion point")
+    declaration = b"""struct DebugSnapshot {
+    uint16_t pc;
+    uint16_t reset_vector;
+    uint8_t a, ps, x, y, sp;
+    uint8_t nor_bank, volume_select, memory_select;
+    uint8_t io05, io06, io08, io09, io0b;
+    uint32_t cycles;
+    uint32_t lcd_addr;
+    bool slept;
+    uint8_t keypad[8];
+    uint8_t opcodes[8];
+};
+extern void GetDebugSnapshot(DebugSnapshot* out);
+"""
+    header = header.replace(header_anchor, declaration + header_anchor, 1)
+    if b"void GetDebugSnapshot(DebugSnapshot* out)" in source:
+        raise ValueError("DebugSnapshot implementation already exists")
+    implementation = b"""void GetDebugSnapshot(DebugSnapshot* out) {
+    if (out == NULL) return;
+    out->pc = reg_pc;
+    out->reset_vector = PeekW(RESET_VEC);
+    out->a = reg_a;
+    out->ps = reg_ps;
+    out->x = reg_x;
+    out->y = reg_y;
+    out->sp = reg_sp;
+    out->nor_bank = ram_io[0x00];
+    out->volume_select = ram_io[0x0D];
+    out->memory_select = ram_io[0x0A];
+    out->io05 = ram_io[0x05];
+    out->io06 = ram_io[0x06];
+    out->io08 = ram_io[0x08];
+    out->io09 = ram_io[0x09];
+    out->io0b = ram_io[0x0B];
+    out->cycles = cycles;
+    out->lcd_addr = lcd_addr;
+    out->slept = slept;
+    memcpy(out->keypad, keypad_matrix, sizeof(out->keypad));
+    for (uint32_t i = 0; i < sizeof(out->opcodes); ++i)
+        out->opcodes[i] = Peek((uint16_t)(reg_pc + i));
+}
+"""
+    final_brace = source.rfind(b"}")
+    if final_brace < 0 or source[final_brace + 1:].strip():
+        raise ValueError("NC1020 source does not end with the expected namespace brace")
+    source = source[:final_brace] + implementation + linebreak + source[final_brace:]
+    return source, header
+
+
 def main() -> None:
     out = ROOT / "upstream"
     out.mkdir(parents=True, exist_ok=True)
@@ -135,6 +191,15 @@ def main() -> None:
         path = out / name
         path.write_bytes(data)
         print(f"Verified upstream blob {name}: {git_blob_sha}")
+    cpp_path, header_path = out / "nc1020.cpp", out / "nc1020.h"
+    try:
+        patched_cpp, patched_header = patch_debug_interface(
+            cpp_path.read_bytes(), header_path.read_bytes())
+    except ValueError as exc:
+        raise SystemExit(str(exc))
+    cpp_path.write_bytes(patched_cpp)
+    header_path.write_bytes(patched_header)
+    print("Added read-only WQX CPU/mapper/LCD debug snapshot API.")
     print("Fetched emulator source only. No ROM or firmware image was requested.")
 
 
