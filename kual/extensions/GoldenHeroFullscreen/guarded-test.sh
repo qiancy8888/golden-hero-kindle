@@ -2,12 +2,12 @@
 # KPW1 FW 5.6.1.1 ONLY: reversible, time-limited fullscreen guard.
 # Do not STOP/kill Xorg or stop framework. Preserve WordScreen/KOReader.
 MODE="$1"
-case "$MODE" in display|touch|controls) ;; *) exit 2 ;; esac
+case "$MODE" in display|touch|controls|ui) ;; *) exit 2 ;; esac
 LOG_DIR=/mnt/us/golden_hero/logs
 mkdir -p "$LOG_DIR" || exit 3
-LOG="$LOG_DIR/fullscreen-v0.8-$MODE.log"
+LOG="$LOG_DIR/fullscreen-v0.9-$MODE.log"
 exec >>"$LOG" 2>&1
-printf '\n==== Golden Hero KPW1 v0.8 %s (protected fullscreen) ====\n' "$MODE"
+printf '\n==== Golden Hero KPW1 v0.9.0 %s (protected fullscreen) ====\n' "$MODE"
 date
 if ! grep -q 'Kindle 5\.6\.1\.1' /etc/prettyversion.txt 2>/dev/null; then
   echo 'ERROR: Unsupported firmware. KPW1 5.6.1.1 required. Nothing changed.'
@@ -30,9 +30,9 @@ if [ -z "$KILLALL" ]; then
 fi
 LIPC="$(find_program lipc-set-prop)"
 EXE=/mnt/us/golden_hero/golden_hero
-if [ "$MODE" = display ] || [ "$MODE" = controls ]; then
+if [ "$MODE" = display ] || [ "$MODE" = controls ] || [ "$MODE" = ui ]; then
   if [ ! -x "$EXE" ]; then
-    echo 'ERROR: Golden Hero KPW1 ARM executable is missing. Install v0.8 ROM-free package first.'
+    echo 'ERROR: Golden Hero KPW1 ARM executable is missing. Install v0.9.0 ROM-free package first.'
     exit 5
   fi
 else
@@ -98,6 +98,10 @@ if [ "$MODE" = display ]; then
 elif [ "$MODE" = controls ]; then
   echo 'Starting no-ROM touch controls test (45-second maximum).'
   "$EXE" --controls-test
+  RET=$?
+elif [ "$MODE" = ui ]; then
+  echo 'Starting no-ROM 160x80 LCD and touch layout preview (45-second maximum).'
+  "$EXE" --ui-test
   RET=$?
 else
   echo 'Starting raw cyttsp input event capture.'

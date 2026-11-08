@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.9.0 (2026-11-08)
+- Add a ROM-free KUAL UI preview that renders a representative 160x80 monochrome LCD screen in the real game viewport alongside the same touch controls.
+- Optimize 1bpp-to-8bpp LCD expansion with a row-buffer blitter instead of thousands of per-pixel framebuffer rectangle calls.
+- Add host regression tests for bit order, integer scaling, framebuffer offsets and grayscale inversion.
+- Reuse the previously hardware-verified fullscreen recovery guard; the preview restores the original framebuffer before returning to Kindle UI.
+- This is a screen/layout validation milestone, not proof of game boot or gameplay; legally usable NC1020 images are still required for that.
+
 ## v0.8.1 (2026-11-08)
 - Fix the KPW1 controls-test EXIT path: it now waits for finger release, restores the exact pre-test framebuffer snapshot, and sends a full-screen EPDC refresh before the KUAL wrapper resumes Awesome and restores Pillow.
 - Restore the framebuffer on timeout and handled SIGINT/SIGTERM as well as EXIT.

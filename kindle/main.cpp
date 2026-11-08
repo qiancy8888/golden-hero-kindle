@@ -137,16 +137,31 @@ void ui(FbScreen& fb){
  fb.refresh(0,0,fb.w,fb.h,true);
 }
 void lcd_draw(FbScreen& fb,const uint8_t* frame){
- for(int y=0;y<80;++y){
-  for(int x=0;x<160;++x){
-   int pos=y*160+x;
-   const bool black=(frame[pos>>3] & (1<<(7-(pos&7))))!=0;
-   fb.rect(gx+x*scale,gy+y*scale,scale,scale,black?0:255);
-  }
- }
+ fb.blit_mono_1bpp(gx,gy,160,80,frame,scale,0,255);
  fb.refresh(gx,gy,160*scale,80*scale,false);
 }
-int run_controls_test(){
+void lcd_set_pixel(uint8_t* frame,int x,int y){
+ if(x<0||x>=160||y<0||y>=80)return;
+ const int bit=y*160+x;
+ frame[bit>>3]|=(uint8_t)(1u<<(7-(bit&7)));
+}
+void lcd_draw_text(uint8_t* frame,int x,int y,const char* text){
+ for(;*text;++text,x+=6){
+  const char* bits=glyph(*text);
+  for(int row=0;row<5;++row)for(int col=0;col<5;++col)
+   if(bits[row*5+col]=='1')lcd_set_pixel(frame,x+col,y+row);
+ }
+}
+void make_demo_lcd(uint8_t* frame){
+ std::memset(frame,0,1600);
+ for(int x=2;x<158;++x){lcd_set_pixel(frame,x,2);lcd_set_pixel(frame,x,77);}
+ for(int y=2;y<78;++y){lcd_set_pixel(frame,2,y);lcd_set_pixel(frame,157,y);}
+ for(int x=10;x<150;++x)lcd_set_pixel(frame,x,25);
+ lcd_draw_text(frame,47,12,"GOLDEN HERO");
+ lcd_draw_text(frame,41,34,"TOUCH UI TEST");
+ lcd_draw_text(frame,50,55,"UP DOWN OK");
+}
+int run_touch_test(bool show_lcd){
  std::string error;
  FbScreen fb;
  if(!fb.open_fb(error)){std::fprintf(stderr,"Framebuffer: %s\n",error.c_str());return 10;}
@@ -163,9 +178,16 @@ int run_controls_test(){
  touch.trace_events=true;
  layout(fb.w,fb.h);
  ui(fb);
- label(fb,gx+(160*scale-10*18)/2,gy+28*scale,"TOUCH TEST",3);
- label(fb,gx+(160*scale-12*12)/2,gy+52*scale,"TAP OR HOLD",2);
- fb.refresh(gx,gy,160*scale,80*scale,false);
+ if(show_lcd){
+  uint8_t demo[1600]={};
+  make_demo_lcd(demo);
+  lcd_draw(fb,demo);
+  std::fprintf(stderr,"ROM-free LCD layout preview: 160x80 source rendered at %dx scale.\n",scale);
+ }else{
+  label(fb,gx+(160*scale-10*18)/2,gy+28*scale,"TOUCH TEST",3);
+  label(fb,gx+(160*scale-12*12)/2,gy+52*scale,"TAP OR HOLD",2);
+  fb.refresh(gx,gy,160*scale,80*scale,false);
+ }
  std::fprintf(stderr,"Controls test ready: tap or hold any virtual button; EXIT ends on release; timeout=45s.\n");
 
  interrupted=0;
@@ -226,9 +248,12 @@ int run_controls_test(){
  fb.close_fb();
  return restored?0:12;
 }
+int run_controls_test(){return run_touch_test(false);}
+int run_ui_test(){return run_touch_test(true);}
+
 void help(){
  std::puts("Golden Hero for KPW1 [DEVELOPMENT BUILD]\n"
-           "Usage: golden_hero [--display-test] [--controls-test] [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
+           "Usage: golden_hero [--display-test] [--controls-test] [--ui-test] [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
            "ROM files: roms/obj_lu.bin and roms/nc1020.fls\n"
            "Needs /dev/fb0 and an accessible /dev/input/eventN touchscreen.\n"
            "Do NOT run on a PC except --check-files or --help.");
@@ -238,12 +263,13 @@ void help(){
 int run_display_test();
 
 int main(int argc,char** argv){
- bool check=false,display_test=false,controls_test=false,swap=false,flipx=false,flipy=false;
+ bool check=false,display_test=false,controls_test=false,ui_test=false,swap=false,flipx=false,flipy=false;
  for(int i=1;i<argc;++i){
   if(!strcmp(argv[i],"--help")){help();return 0;}
   if(!strcmp(argv[i],"--check-files"))check=true;
   else if(!strcmp(argv[i],"--display-test"))display_test=true;
   else if(!strcmp(argv[i],"--controls-test"))controls_test=true;
+  else if(!strcmp(argv[i],"--ui-test"))ui_test=true;
   else if(!strcmp(argv[i],"--touch-swap-xy"))swap=true;
   else if(!strcmp(argv[i],"--touch-flip-x"))flipx=true;
   else if(!strcmp(argv[i],"--touch-flip-y"))flipy=true;
@@ -251,6 +277,7 @@ int main(int argc,char** argv){
  }
  if(display_test) return run_display_test();
  if(controls_test) return run_controls_test();
+ if(ui_test) return run_ui_test();
  bool ok=check_size(filename_rom,0x8000*0x300) && check_size(filename_initial_flash,0x8000*0x20);
  if(check)return ok?0:3;
  if(!ok){std::fprintf(stderr,"Required NC1020 image(s) not found or wrong size; aborting.\n");return 3;}

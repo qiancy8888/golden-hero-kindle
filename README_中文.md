@@ -1,6 +1,25 @@
-# Kindle《黄金英雄坛说》KPW1 移植工程 v0.8.1
+# Kindle《黄金英雄坛说》KPW1 移植工程 v0.9.0
 
-> v0.8.1 修复了触摸测试退出后画面停留的问题：退出时恢复原始 framebuffer 并执行全屏刷新。仍为无 ROM 的 KUAL 测试包，不是可直接游玩的游戏包。
+> v0.9.0 新增无 ROM 的游戏界面布局预览，使用真实 160×80 单色 LCD 视口、实际触摸按键布局和新的快速位图渲染路径。它用于验证屏幕布局与刷新，不代表已经进入真实游戏；正式游玩仍需要有权使用的 NC1020 游戏镜像。
+
+## v0.9.0 游戏界面布局预览与 LCD 渲染优化
+
+本版新增 KUAL → Golden Hero KPW1 Fullscreen Test → **游戏界面布局预览（无需 ROM，45秒自动恢复）**。
+
+预览在 Kindle 实际 758×1024 屏幕上，使用与正式游戏相同的 160×80 LCD 视口、4 倍整数缩放和完整触摸按键布局，显示一张合成的单色示例画面。它不读取 ROM、不初始化游戏核心，也不修改 WordScreen。
+
+同时把原先逐个像素调用 framebuffer 矩形绘制的 LCD 输出，改为按行扩展并直接写入 8bpp framebuffer，保留原有部分刷新机制。新增桌面单元测试，覆盖 1bpp 位序、整数缩放、framebuffer offset 和灰度反转。
+
+### v0.9.0 实机测试
+
+1. 从 GitHub Actions 下载 `golden-hero-kpw1-v0.9.0-rom-free` artifact 并解压外层 ZIP。
+2. 将 `Kindle-Golden-Hero-KPW1-v0.9.0-ROM-free.zip` 解压到 Kindle USB 根目录，合并 `extensions/`，保留 WordScreen 文件。
+3. KUAL → **Golden Hero KPW1 Fullscreen Test** → **游戏界面布局预览（无需 ROM，45秒自动恢复）**。
+4. 检查上方 160×80 屏幕预览是否完整、文字是否方向正确、灰度是否正常；再点击方向键和功能键，确认按下反馈。
+5. 点击 EXIT，确认返回原来的 Kindle 书库界面。
+6. 如有问题，上传 `golden_hero/logs/fullscreen-v0.9-ui.log`。
+
+本次只验证实际游戏视口的位图显示、布局、触摸反馈和恢复流程；示例画面不是游戏截图，不能据此判断游戏 ROM 是否能启动。
 
 ## v0.8.1 退出画面恢复修复
 
@@ -12,7 +31,7 @@
 
 实机已确认触摸标记准确落在手指点击的位置，坐标映射固定为 X=0–758、Y=0–1024，不交换轴、不翻转。
 
-本版将输入读取改为按 Linux input 的 SYN_REPORT 分组，分别识别按下、移动和释放。游戏运行时，手指按住方向键会持续保持 NC1020 的 SetKey 按下状态，松开时释放；拖动到另一个按键区域时，会先释放旧键再按下新键。SAVE 只在首次按下时执行，EXIT 在按下时退出。
+本版将输入读取改为按 Linux input 的 SYN_REPORT 分组，分别识别按下、移动和释放。游戏运行时，手指按住方向键会持续保持 NC1020 的 SetKey 按下状态，松开时释放；拖动到另一个按键区域时，会先释放旧键再按下新键。SAVE 只在首次按下时执行，EXIT 在手指抬起时确认。
 
 新增 `--controls-test`，不需要 ROM。它使用与正式游戏相同的虚拟按键布局，显示按键按下状态，并记录 DOWN / DRAG / UP、按键名称、NC1020 key code 和屏幕坐标。
 
@@ -22,7 +41,7 @@
 2. 将其中的 `Kindle-Golden-Hero-KPW1-v0.8-ROM-free.zip` 解压到 Kindle USB 根目录，合并 `extensions/`，不要删除已有 WordScreen 文件。
 3. 安全弹出 Kindle，打开 KUAL → **Golden Hero KPW1 Fullscreen Test** → **触摸按键操作测试（45秒，自动恢复）**。
 4. 按住方向键约 2–3 秒，再松开；观察按键是否变灰/恢复。再试 OK、BACK、MENU 和 EXIT。
-5. EXIT 可提前结束；否则测试 60 秒后自动退出。65 秒独立 watchdog 会恢复 Awesome 和 Kindle 状态栏。
+5. EXIT 可提前结束；否则测试 45 秒后自动退出。65 秒独立 watchdog 会恢复 Awesome 和 Kindle 状态栏。
 6. 日志位于 `golden_hero/logs/fullscreen-v0.8-controls.log`，请上传给我。
 
 全屏保护流程沿用已在 PW1 5.6.1.1 上验证的 v0.7 流程：检查固件和 `mxc_epdc_fb`，启动 65 秒恢复 watchdog，使用 Pillow nativeBridge 隐藏状态栏，暂停 Awesome（不停止 Xorg 或 framework），运行测试后恢复 Awesome 和状态栏。不会修改 WordScreen。

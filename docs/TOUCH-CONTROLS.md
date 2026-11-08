@@ -1,4 +1,4 @@
-# KPW1 touch controls (v0.8)
+# KPW1 touch controls (v0.9.0)
 
 The physical KPW1 touch panel was verified by the user: visible touch markers landed at the finger locations. Use the measured 758×1024 coordinate space directly (X 0–758, Y 0–1024), with no axis swap or flip.
 
@@ -37,4 +37,4 @@ The key IDs above are taken from the upstream NC1020 SDL keyboard switch, not in
 
 KUAL launches the test through the proven v0.7 protected fullscreen guard: it checks Kindle FW 5.6.1.1 and the mxc_epdc_fb driver, starts a 65-second recovery watchdog, asks Pillow to hide the native status bar, pauses only Awesome (never Xorg or framework), then restores Awesome and the status bar on exit. WordScreen files and power settings are not changed.
 
-The no-ROM test validates touch hitboxes and input transitions only. Actual character movement and gameplay still require user-provided, legally usable NC1020 images and a separate in-game test.
+The no-ROM controls test validates touch hitboxes and input transitions. The v0.9.0 UI preview additionally validates the actual 160x80 LCD viewport and monochrome scaling. Actual character movement and gameplay still require user-provided, legally usable NC1020 images and a separate in-game test.

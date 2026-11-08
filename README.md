@@ -2,7 +2,7 @@
 
 An experimental port of the NC1020 emulator core to the first-generation Kindle Paperwhite. The goal is to run **Golden Hero Tan Shuo (黄金英雄坛说)** on the KPW1 e-ink display with a KUAL launcher and touchscreen controls.
 
-**Status: v0.8.1 ROM-free KUAL touch-controls test build.** The KPW1 touch coordinates have been confirmed on hardware. The controls test now restores the pre-test framebuffer and sends a full-screen refresh on exit. The game loop now holds NC1020 keys while a virtual button is held, and a protected fullscreen test mode can validate the controls without ROM images. The game itself still requires separately obtained, legally usable NC1020 images.
+**Status: v0.9.0 ROM-free KUAL LCD/game-layout preview.** The KPW1 touch coordinates have been confirmed on hardware. The controls test restores the pre-test framebuffer and sends a full-screen refresh on exit. v0.9.0 adds a ROM-free preview of the actual 160x80 game viewport and optimizes monochrome LCD blitting; this is not yet a playable game build. The game loop now holds NC1020 keys while a virtual button is held, and a protected fullscreen test mode can validate the controls without ROM images. The game itself still requires separately obtained, legally usable NC1020 images.
 
 [简体中文说明](README_中文.md) · [Changelog](CHANGELOG.md)
 
@@ -39,7 +39,7 @@ The NC1020 source-code license does not automatically grant redistribution right
 
 ## Current limitations
 
-- CI generates a ROM-free KUAL install ZIP with a 60-second touch-control test and a 65-second fullscreen recovery watchdog.
+- CI generates a ROM-free KUAL install ZIP with 45-second touch-control and LCD-layout previews, each using a 65-second fullscreen recovery watchdog.
 - KPW1 display, grayscale refresh, and touch coordinate accuracy have been confirmed on the user's physical device.
 - v0.8 implements key-down/key-up hold behavior, but the no-ROM test validates only touch hitboxes and event state; actual in-game movement still awaits legally usable game images.
 - Save persistence and long-running game behavior remain to be tested.

@@ -16,6 +16,7 @@ else:
         assert call('--check-files') == 3, 'Missing ROM files must fail'
         assert call('--display-test') == 10, 'Display test bypasses ROM requirement and fails only on missing host fb0'
         assert call('--controls-test') == 10, 'Controls test bypasses ROM requirement and fails only on missing host fb0'
+        assert call('--ui-test') == 10, 'UI preview bypasses ROM requirement and fails only on missing host fb0'
         (root / 'roms').mkdir()
         (root / 'roms/obj_lu.bin').touch()
         (root / 'roms/nc1020.fls').touch()

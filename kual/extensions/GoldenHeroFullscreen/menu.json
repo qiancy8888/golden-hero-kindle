@@ -14,6 +14,11 @@
       "name": "触摸按键操作测试（45秒，自动恢复屏幕）",
       "priority": 2,
       "action": "./test-controls.sh"
+    },
+    {
+      "name": "游戏界面布局预览（无需 ROM，45秒自动恢复）",
+      "priority": 3,
+      "action": "./test-ui.sh"
     }
   ]
 }
