@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension>
+  <information>
+    <name>KPW1 Framebuffer Touch Probe</name>
+    <version>0.4</version>
+    <author>Golden Hero KPW1 Port</author>
+    <id>golden-hero-kpw1-fb-touch-probe</id>
+  </information>
+  <menus><menu type="json">menu.json</menu></menus>
+</extension>

@@ -1,0 +1,16 @@
+#pragma once
+#include <cstdint>
+#include <linux/fb.h>
+#include <string>
+#include <vector>
+struct FbScreen {
+ int fd=-1; int w=0,h=0,depth=0,stride=0;
+ size_t bytes=0; unsigned char* data=nullptr;
+ fb_var_screeninfo var{};
+ bool open_fb(std::string &error);
+ void close_fb();
+ void pixel(int x,int y,uint8_t gray);
+ void rect(int x,int y,int width,int height,uint8_t gray);
+ void border(int x,int y,int width,int height,uint8_t gray,int thick=3);
+ bool refresh(int x,int y,int width,int height,bool full=false);
+};

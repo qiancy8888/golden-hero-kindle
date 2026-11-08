@@ -1,0 +1,10 @@
+build-*/
+release-root/
+*.zip
+*.pyc
+__pycache__/
+roms/*.bin
+roms/*.fls
+data/*.fls
+data/*.sts
+logs/

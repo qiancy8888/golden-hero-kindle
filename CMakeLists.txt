@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.12)
+project(kindle_golden_hero LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
+option(GOLDEN_MOCK_CORE "Compile with mock core for host adapter tests" OFF)
+if(GOLDEN_MOCK_CORE)
+  set(CORE tests/mock_nc1020.cpp)
+else()
+  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/upstream/nc1020.cpp")
+    message(FATAL_ERROR "Missing upstream NC1020 source. Run python3 scripts/fetch_upstream.py first.")
+  endif()
+  set(CORE upstream/nc1020.cpp)
+endif()
+add_executable(golden_hero kindle/main.cpp kindle/fb.cpp kindle/touch.cpp ${CORE})
+target_include_directories(golden_hero PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/kindle ${CMAKE_CURRENT_SOURCE_DIR}/upstream
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+target_compile_options(golden_hero PRIVATE -O2 -Wall -Wextra -Wno-register)
+# Keep librt for compatibility with older Kindle glibc toolchains.
+target_link_libraries(golden_hero PRIVATE rt)

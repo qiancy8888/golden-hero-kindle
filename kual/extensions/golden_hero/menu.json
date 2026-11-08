@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "name": "黄金英雄坛说（启动游戏）",
+      "priority": 0,
+      "action": "./launch.sh"
+    },
+    {
+      "name": "KPW1 设备检测（生成报告）",
+      "priority": 1,
+      "action": "./diagnose.sh"
+    }
+  ]
+}

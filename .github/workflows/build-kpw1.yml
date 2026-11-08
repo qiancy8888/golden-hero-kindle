@@ -1,0 +1,46 @@
+name: Build Golden Hero for Kindle PW1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'kindle/**'
+      - 'scripts/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/build-kpw1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-kpw1:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake python3 zstd
+
+      - name: Install KOReader Kindle5 cross-toolchain
+        run: ./scripts/bootstrap-kindle5-toolchain.sh
+
+      - name: Fetch pinned NC1020 emulator source (source files only)
+        run: python3 scripts/fetch_upstream.py
+
+      - name: Build and verify KPW1 ARM soft-float executable
+        run: ./scripts/build-armel.sh
+
+      - name: Build host mock adapter (regression check)
+        run: ./scripts/build-host-mock.sh
+
+      - name: Upload KPW1 executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-hero-kpw1-arm-${{ github.sha }}
+          path: build-armel/golden_hero
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension>
+  <information>
+    <name>KPW1 Golden Hero Device Check</name>
+    <version>0.3</version>
+    <author>Kindle Golden Hero Port</author>
+    <id>golden-hero-kpw1-device-check</id>
+  </information>
+  <menus><menu type="json">menu.json</menu></menus>
+</extension>
