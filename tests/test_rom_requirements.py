@@ -13,6 +13,8 @@ assert '"GAME"' not in actions and '"MAIN"' not in actions, 'GAME and MAIN must 
 assert '{-3,"X (disabled)"}' in actions, 'X must be isolated during reboot diagnosis'
 assert 'for(int i=0;i<240;++i) wqx::RunTimeSlice(25,false);' in source, '6-second boot delay must remain'
 assert 'caught_signal' in source, 'Actual external signal must be logged'
+assert 'b.key==-2 || b.key==-3 || b.key==0x08' in source, 'X/MAIN/SAVE must remain disabled'
+assert 'SAFE GAME TEST: X drag ignored' in source, 'Dragging onto X must not inject Shift-X'
 binary = project / 'build-host-mock/golden_hero'
 if not binary.is_file():
     print('Host mock has not been built; skipping ROM CLI test')

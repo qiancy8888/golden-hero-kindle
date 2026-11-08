@@ -22,7 +22,7 @@
 5. LCD 刷新从每 180ms 一次降到每 1100ms 一次（有变化时），安全测试 30 秒自动退出；外层 45 秒子进程终止保护和 65 秒 Awesome 恢复保护仍有效。
 6. 和 v0.8.1 一样，在退出时恢复原始 framebuffer，日志位于 `/mnt/us/golden_hero/logs/fullscreen-v0.9.3-game.log`。
 
-**安装前先从 Kindle 备份 `documents/GoldenHeroPrivate/data/` 整个目录（如果存在），不要删除已损坏或尚待分析的存档。** 更新 v0.9.3 安装包时只合并程序及 KUAL 文件，个人 `documents/GoldenHeroPrivate/roms/` 保留原样。首次安全测试只点击 GAME、OK、BACK 和 EXIT；不要尝试重启键 MAIN，安全版该键已禁用。
+**安装前先从 Kindle 备份 `documents/GoldenHeroPrivate/data/` 整个目录（如果存在），不要删除已损坏或尚待分析的存档。** 更新 v0.9.5 安装包时只合并程序及 KUAL 文件，个人 `documents/GoldenHeroPrivate/roms/` 保留原样。首次安全测试不要点击 X、MAIN 或 SAVE；X 暂时禁用，MAIN/SAVE 仍然禁用。只验证自动进入游戏、方向键、OK/BACK 与 EXIT，最多运行 30 秒。
 
 这版是故障隔离的诊断构建，**不保证再也不会导致系统重启**。若仍重启，停止使用真实 ROM 模式，优先取 Kindle 系统日志/电源记录，并保留 `fullscreen-v0.9.3-game.log` 和 `launcher.log`。无 ROM 测试也已加入单实例锁，但不应单凭此判断原因已经找到。
 

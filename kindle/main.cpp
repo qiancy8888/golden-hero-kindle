@@ -476,6 +476,8 @@ int main(int argc,char** argv){
       std::fprintf(stderr,"Key down (drag): %s (0x%02X)\n",b.label,(unsigned)held_key);
      }else if(b.key==0x08){
       std::fprintf(stderr,"SAFE GAME TEST: MAIN drag ignored.\n");
+     }else if(b.key==-3){
+      std::fprintf(stderr,"SAFE GAME TEST: X drag ignored (0x31 disabled).\n");
      }
     }
    }

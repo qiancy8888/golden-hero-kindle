@@ -5,9 +5,9 @@ MODE="$1"
 case "$MODE" in display|touch|controls|ui|demo|game) ;; *) exit 2 ;; esac
 LOG_DIR=/mnt/us/golden_hero/logs
 mkdir -p "$LOG_DIR" || exit 3
-LOG="$LOG_DIR/fullscreen-v0.9.4-$MODE.log"
+LOG="$LOG_DIR/fullscreen-v0.9.5-$MODE.log"
 exec >>"$LOG" 2>&1
-printf '\n==== Golden Hero KPW1 v0.9.4 %s (protected fullscreen, auto-game) ====\n' "$MODE"
+printf '\n==== Golden Hero KPW1 v0.9.5 %s (protected fullscreen, auto-game) ====\n' "$MODE"
 date
 if ! grep -q 'Kindle 5\.6\.1\.1' /etc/prettyversion.txt 2>/dev/null; then
   echo 'ERROR: Unsupported firmware. KPW1 5.6.1.1 required. Nothing changed.'
@@ -32,7 +32,7 @@ LIPC="$(find_program lipc-set-prop)"
 EXE=/mnt/us/golden_hero/golden_hero
 if [ "$MODE" = display ] || [ "$MODE" = controls ] || [ "$MODE" = ui ] || [ "$MODE" = demo ] || [ "$MODE" = game ]; then
   if [ ! -x "$EXE" ]; then
-    echo 'ERROR: Golden Hero KPW1 ARM executable is missing. Install v0.9.3 ROM-free package first.'
+    echo 'ERROR: Golden Hero KPW1 ARM executable is missing. Install v0.9.5 ROM-free package first.'
     exit 5
   fi
 else

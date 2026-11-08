@@ -7,6 +7,10 @@ on:
     paths:
       - 'kindle/**'
       - 'scripts/**'
+      - 'tests/**'
+      - 'README*'
+      - 'CHANGELOG.md'
+      - 'kual/**'
       - 'CMakeLists.txt'
       - '.github/workflows/build-kpw1.yml'
 
