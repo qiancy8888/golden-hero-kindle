@@ -1,7 +1,7 @@
 {
   "items": [
     {
-      "name": "NC1020 安全试运行（30秒，无存档；MAIN禁用）",
+      "name": "自动进入黄金英雄坛说（30秒无存档诊断）",
       "priority": 0,
       "action": "./launch.sh"
     },

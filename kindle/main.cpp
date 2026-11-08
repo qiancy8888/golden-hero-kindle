@@ -89,12 +89,12 @@ void layout(int w,int h){
   const struct {int key;const char* label;} actions[]={
     {0x10,"FLY"},{0x13,"MENU"},
     {0x1D,"OK"},{0x3B,"BACK"},
-    {0x08,"MAIN"},{0x0E,"GAME"},
     {0x31,"X"},{0x25,"Y"},
     {0x37,"PGUP"},{0x1E,"PGDN"},
     {-2,"SAVE"},{-1,"EXIT"}
   };
-  for(int i=0;i<12;i++){
+  // GAME is injected automatically; MAIN and GAME are not touch controls.
+  for(int i=0;i<10;i++){
     const int col=i%2,row=i/2;
     buttons.push_back({grid_x+col*(bw+gap),top+row*step,bw,bh,
                        actions[i].key,actions[i].label});
@@ -403,11 +403,20 @@ int main(int argc,char** argv){
  // Never read a possibly corrupted previous saved state or write any save.
  filename_flash=filename_initial_flash;
  filename_state="/tmp/golden-hero-no-existing-state-"+std::to_string((long long)getpid())+".sts";
- std::fprintf(stderr,"SAFE GAME TEST: 30s limit, MAIN/SAVE disabled, no persistent reads/writes, NOR and state NOT saved.\n");
+ std::fprintf(stderr,"SAFE GAME TEST: 30s limit, AUTO-GAME enabled, MAIN/SAVE disabled, no persistent reads/writes, NOR and state NOT saved.\n");
  std::signal(SIGINT,on_signal); std::signal(SIGTERM,on_signal);
  wqx::WqxRom rom{filename_rom,filename_flash,filename_state};
  wqx::Initialize(rom);
  wqx::LoadNC1020();
+ // Let NC1020 firmware finish booting, then synthesize the upstream F11/GAME key.
+ // This happens before the first LCD copy, so the home screen is never drawn.
+ std::fprintf(stderr,"AUTO-GAME: boot settling for 1800ms before F11.\\n");
+ for(int i=0;i<72;++i) wqx::RunTimeSlice(25,false);
+ wqx::SetKey(0x0E,true);
+ for(int i=0;i<5;++i) wqx::RunTimeSlice(25,false);
+ wqx::SetKey(0x0E,false);
+ std::fprintf(stderr,"AUTO-GAME: sent F11 (0x0E) for 125ms; settling 250ms.\\n");
+ for(int i=0;i<10;++i) wqx::RunTimeSlice(25,false);
  FbScreen fb;std::string error;
  if(!fb.open_fb(error)) {std::fprintf(stderr,"Framebuffer: %s\n",error.c_str());return 5;}
  TouchInput touch;
@@ -422,7 +431,14 @@ int main(int argc,char** argv){
  std::fprintf(stderr,"SAFE GAME TEST original framebuffer snapshot: %zu bytes\n",display_bytes);
  layout(fb.w,fb.h); ui(fb);
  uint8_t lcd[1600]={};uint8_t previous[1600]={};bool was_drawn=false;
- uint64_t last_frame=0,last_full=clock_ms(),next=clock_ms();
+ // Draw only the post-F11 frame; do not expose the NC1020 home screen.
+ if(wqx::CopyLcdBuffer(lcd)){
+  lcd_draw(fb,lcd);memcpy(previous,lcd,1600);was_drawn=true;
+  std::fprintf(stderr,"AUTO-GAME: first visible frame copied after F11.\\n");
+ }else{
+  std::fprintf(stderr,"AUTO-GAME: LCD not ready on first copy; waiting for refresh.\\n");
+ }
+ uint64_t last_frame=clock_ms(),last_full=clock_ms(),next=clock_ms();
  const uint64_t started=clock_ms();
  int active_button=-1,held_key=-1;
  while(!interrupted && clock_ms()-started<30000){

@@ -5,7 +5,13 @@ import os
 import subprocess
 import tempfile
 
-binary = Path(__file__).resolve().parents[1] / 'build-host-mock/golden_hero'
+project = Path(__file__).resolve().parents[1]
+source = (project / 'kindle/main.cpp').read_text(encoding='utf-8')
+assert 'AUTO-GAME: sent F11 (0x0E)' in source, 'Automatic F11 must remain enabled'
+actions = source.split('const struct {int key;const char* label;} actions[]={', 1)[1].split('};', 1)[0]
+assert '"GAME"' not in actions and '"MAIN"' not in actions, 'GAME and MAIN must not be touch controls'
+assert 'for(int i=0;i<72;++i) wqx::RunTimeSlice(25,false);' in source, 'Boot delay changed'
+binary = project / 'build-host-mock/golden_hero'
 if not binary.is_file():
     print('Host mock has not been built; skipping ROM CLI test')
 else:

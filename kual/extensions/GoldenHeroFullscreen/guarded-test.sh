@@ -5,9 +5,9 @@ MODE="$1"
 case "$MODE" in display|touch|controls|ui|demo|game) ;; *) exit 2 ;; esac
 LOG_DIR=/mnt/us/golden_hero/logs
 mkdir -p "$LOG_DIR" || exit 3
-LOG="$LOG_DIR/fullscreen-v0.9.3-$MODE.log"
+LOG="$LOG_DIR/fullscreen-v0.9.4-$MODE.log"
 exec >>"$LOG" 2>&1
-printf '\n==== Golden Hero KPW1 v0.9.3 %s (protected fullscreen) ====\n' "$MODE"
+printf '\n==== Golden Hero KPW1 v0.9.4 %s (protected fullscreen, auto-game) ====\n' "$MODE"
 date
 if ! grep -q 'Kindle 5\.6\.1\.1' /etc/prettyversion.txt 2>/dev/null; then
   echo 'ERROR: Unsupported firmware. KPW1 5.6.1.1 required. Nothing changed.'
@@ -143,7 +143,7 @@ elif [ "$MODE" = demo ]; then
   "$EXE" --demo-test
   RET=$?
 elif [ "$MODE" = game ]; then
-  echo 'Starting protected REAL NC1020 SAFE game test: 30s; MAIN/SAVE disabled; no state/Flash writes.'
+  echo 'Starting protected REAL NC1020 AUTO-GAME test: 30s; synthetic F11; MAIN/SAVE disabled; no state/Flash writes.'
   "$EXE" --safe-game-test &
   GAME_PID=$!
   # Independent recovery if the emulator blocks inside a core timeslice.

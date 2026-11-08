@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.9.4 (2026-11-08) — Direct-to-game boot
+- Let NC1020 firmware run for 1.8s, synthesize upstream F11/GAME (0x0E) for 125ms, then settle for 250ms.
+- Perform automatic F11 before the first LCD copy so the NC1020 home screen is not intentionally rendered.
+- Remove GAME and MAIN from touch controls.
+- Retain the 30s no-save diagnostic, disabled MAIN/SAVE, single-instance fullscreen guard and recovery watchdog.
+- Add source regression checks for automatic F11 and removed touch buttons.
+- Physical KPW1 confirmation is still required; adjust boot timing if needed.
+
+
 ## v0.9.3 (2026-11-08) — KPW1 reboot safety hotfix
 - Immediately disable all unprotected persistent game launches after the user reported a genuine Kindle system reboot on MAIN.
 - Route the KUAL game launcher through the proven protected fullscreen wrapper and a single-owner /tmp lock.
