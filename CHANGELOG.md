@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.9.2 (2026-11-08)
+- Move NC1020 ROM and initial NOR Flash lookup to `GOLDEN_HERO_PRIVATE_DIR/roms`; KUAL sets this to `/mnt/us/documents/GoldenHeroPrivate`.
+- Move mutable NOR Flash and emulator state to the private sibling `data/` directory, preserving the initial image as read-only input.
+- Make the KUAL launcher reject missing or wrong-sized private images and never fall back to files inside the app directory.
+- Make both packaging entry points produce ROM-free installers; add private-folder setup instructions and regression tests for external-path loading.
+- CI continues to fetch pinned emulator source only; it never fetches or packages ROM/firmware binaries.
+
 ## v0.9.1 (2026-11-08)
 - Confirm real KPW1 UI viewport, 160x80 upscaled 4x, and touch layout from on-device photo.
 - Add a separate original ROM-free mini town walking test: D-pad moves the player, held directions repeat, buildings and an NPC block movement, OK talks to NPC, MENU and BACK open/close overlays.

@@ -5,6 +5,16 @@ release-root/
 __pycache__/
 roms/*.bin
 roms/*.fls
+roms/*.sts
+roms/*.new
 data/*.fls
 data/*.sts
+data/*.new
+private/
+local-roms/
 logs/
+GoldenHeroPrivate/
+documents/GoldenHeroPrivate/
+**/obj_lu.bin
+**/nc1020.fls
+**/nc1020.sts

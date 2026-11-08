@@ -21,26 +21,45 @@ void on_signal(int) {interrupted=1;}
 uint64_t clock_ms() {struct timespec ts{};clock_gettime(CLOCK_MONOTONIC,&ts);return uint64_t(ts.tv_sec)*1000+ts.tv_nsec/1000000;}
 void nap_ms(unsigned ms) {usleep(ms*1000);}
 
-const char* filename_rom="roms/obj_lu.bin";
-const char* filename_initial_flash="roms/nc1020.fls";
-const char* filename_flash="data/nc1020.fls";
-const char* filename_state="data/nc1020.sts";
+// KUAL points this at /mnt/us/documents/GoldenHeroPrivate.
+// Desktop/developer runs default to the current working directory.
+std::string private_root=".";
+std::string rom_dir, data_dir;
+std::string filename_rom, filename_initial_flash, filename_flash, filename_state;
 
-bool check_size(const char* name, off_t expected) {
+void configure_storage_paths() {
+  const char* configured=std::getenv("GOLDEN_HERO_PRIVATE_DIR");
+  if(configured && *configured) private_root=configured;
+  while(private_root.size()>1 && private_root[private_root.size()-1]=='/')
+    private_root.erase(private_root.size()-1);
+  rom_dir=private_root+"/roms";
+  data_dir=private_root+"/data";
+  filename_rom=rom_dir+"/obj_lu.bin";
+  filename_initial_flash=rom_dir+"/nc1020.fls";
+  filename_flash=data_dir+"/nc1020.fls";
+  filename_state=data_dir+"/nc1020.sts";
+}
+
+bool check_size(const std::string& name, off_t expected) {
   struct stat st{};
-  if(stat(name,&st)!=0){std::fprintf(stderr,"Missing %s\n",name);return false;}
+  if(stat(name.c_str(),&st)!=0){std::fprintf(stderr,"Missing %s\n",name.c_str());return false;}
   if(st.st_size!=expected){std::fprintf(stderr,"Unexpected size %s: got %lld, expected %lld\n",
-      name,(long long)st.st_size,(long long)expected);return false;}
+      name.c_str(),(long long)st.st_size,(long long)expected);return false;}
   return true;
 }
-bool copy_file(const char* src,const char* dst) {
- FILE* in=fopen(src,"rb"); if(!in)return false;
- FILE* out=fopen(dst,"wb");if(!out){fclose(in);return false;}
+bool copy_file(const std::string& src,const std::string& dst) {
+ FILE* in=fopen(src.c_str(),"rb"); if(!in)return false;
+ FILE* out=fopen(dst.c_str(),"wb");if(!out){fclose(in);return false;}
  char buf[8192]; size_t n; bool good=true;
  while((n=fread(buf,1,sizeof(buf),in))>0) if(fwrite(buf,1,n,out)!=n){good=false;break;}
  if(ferror(in))good=false;
  if(fclose(out)!=0)good=false;
  fclose(in);return good;
+}
+bool ensure_directory(const std::string& path) {
+ if(mkdir(path.c_str(),0755)==0)return true;
+ struct stat st{};
+ return stat(path.c_str(),&st)==0 && S_ISDIR(st.st_mode);
 }
 struct Button {int x,y,w,h,key;const char* label;};
 std::vector<Button> buttons;
@@ -343,7 +362,8 @@ int run_demo_test(){return run_touch_test(true,true);}
 void help(){
  std::puts("Golden Hero for KPW1 [DEVELOPMENT BUILD]\n"
            "Usage: golden_hero [--display-test] [--controls-test] [--ui-test] [--demo-test] [--check-files] [--touch-swap-xy] [--touch-flip-x] [--touch-flip-y]\n"
-           "ROM files: roms/obj_lu.bin and roms/nc1020.fls\n"
+           "ROM files: $GOLDEN_HERO_PRIVATE_DIR/roms/obj_lu.bin and nc1020.fls\n"
+           "KUAL sets GOLDEN_HERO_PRIVATE_DIR to /mnt/us/documents/GoldenHeroPrivate.\n"
            "Needs /dev/fb0 and an accessible /dev/input/eventN touchscreen.\n"
            "Do NOT run on a PC except --check-files or --help.");
 }
@@ -365,17 +385,21 @@ int main(int argc,char** argv){
   else if(!strcmp(argv[i],"--touch-flip-y"))flipy=true;
   else{std::fprintf(stderr,"Unknown argument: %s\n",argv[i]);return 2;}
  }
+ configure_storage_paths();
  if(display_test) return run_display_test();
  if(controls_test) return run_controls_test();
  if(ui_test) return run_ui_test();
  if(demo_test) return run_demo_test();
+ std::fprintf(stderr,"Private NC1020 data directory: %s\n",private_root.c_str());
  bool ok=check_size(filename_rom,0x8000*0x300) && check_size(filename_initial_flash,0x8000*0x20);
  if(check)return ok?0:3;
  if(!ok){std::fprintf(stderr,"Required NC1020 image(s) not found or wrong size; aborting.\n");return 3;}
  // Preserve supplied initial flash. All game changes go to data/nc1020.fls.
- mkdir("data",0755);
+ if(!ensure_directory(data_dir)){
+  std::fprintf(stderr,"Cannot create private data directory: %s\n",data_dir.c_str());return 4;
+ }
  struct stat flash_info{};
- if(stat(filename_flash,&flash_info)!=0){
+ if(stat(filename_flash.c_str(),&flash_info)!=0){
   if(!copy_file(filename_initial_flash,filename_flash)){
    std::fprintf(stderr,"Cannot initialize data/nc1020.fls\n");return 4;
   }

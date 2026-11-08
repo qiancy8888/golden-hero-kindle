@@ -1,6 +1,6 @@
-# Kindle《黄金英雄坛说》KPW1 移植工程 v0.9.1
+# Kindle《黄金英雄坛说》KPW1 移植工程 v0.9.2
 
-> v0.9.1 在已经通过实机显示验证的 160×80 视口中加入一个可用触摸方向键移动的小镇演示，测试局部刷新、长按移动、人物碰撞和菜单交互。演示场景是我们自行编写的诊断内容，并非《黄金英雄坛说》原版游戏；原版仍需要合法可用的 NC1020 镜像。
+> v0.9.2 将 ROM/Flash 与程序安装目录彻底分离：KUAL 固定从 Kindle 的 `documents/GoldenHeroPrivate/` 读取个人配置的镜像，并把可变存档写入同目录下的 `data/`。GitHub Actions 和安装 ZIP 均不包含、下载或分发游戏数据。
 
 ## v0.9.1 可行走小镇交互测试（不需要 ROM）
 
@@ -98,11 +98,27 @@ v0.7 新增：
 
 测试会在最长 40 秒后退出，并在正常退出时尝试恢复进入测试前的 framebuffer 画面。若驱动不支持当前刷新调用，请报告日志；实机测试仍属于实验性质。
 
-## 游戏镜像与存档
+## 个人镜像与存档目录（v0.9.2）
 
-正式启动需要你有权使用的 `roms/obj_lu.bin`（24 MiB）和 `roms/nc1020.fls`（1 MiB）。
-它们不能通过本项目自动下载或分发。游戏首次运行时会将初始 Flash 复制到 `data/nc1020.fls`，以免覆盖你的原始镜像。
-v0.6 在上游源码中加入了临时文件写入后重命名的存档保护，并在读取存档时检查大小与版本。保存仍由文件系统具体行为决定，请定期备份 `data/`。
+KUAL 启动器不再从程序安装目录读取 ROM，也不会回退到旧的 `/mnt/us/golden_hero/roms/`。它固定使用 Kindle USB 存储中的独立目录：
+
+```text
+/mnt/us/documents/GoldenHeroPrivate/
+├── roms/
+│   ├── obj_lu.bin       # 25,165,824 bytes
+│   └── nc1020.fls       # 1,048,576 bytes
+└── data/                # 首次启动自动创建
+    ├── nc1020.fls       # 可变 NOR Flash
+    └── nc1020.sts       # 模拟器状态/存档
+```
+
+把你有权使用的两份镜像放入 `roms/`。启动器会检查文件大小；缺失或大小不正确时，会停止启动并把原因写入 `/mnt/us/golden_hero/logs/launcher.log`。
+
+首次运行时，程序把初始 `roms/nc1020.fls` 复制到 `data/nc1020.fls`，之后只修改 `data/` 中的文件，保留初始镜像不变。更新 KUAL 程序不会覆盖 `GoldenHeroPrivate/`。请定期备份整个 `data/` 目录。
+
+GitHub 仓库、Actions 编译流程和安装 ZIP 均不下载、不包含、不分发游戏 ROM/固件。开源模拟器代码的 BSD 许可不自动授予 ROM 文件的使用或再分发权；目录隔离只是数据管理措施，不代表对任何特定镜像的授权判断。
+
+详细步骤见安装包内的 `PRIVATE-ROM-SETUP.md`。
 
 ## 已确认的设备环境（来自两份实机只读报告）
 
@@ -209,29 +225,20 @@ v0.6 在上游源码中加入了临时文件写入后重命名的存档保护，
 
 触摸按键布局与 NC1020 原始键值对应关系见 [`docs/TOUCH-CONTROLS.md`](docs/TOUCH-CONTROLS.md)。
 
-## 游戏数据
+## ROM-free 安装包
 
-模拟器需要两份镜像：
-
-- `roms/obj_lu.bin`：25,165,824 bytes（24 MiB）
-- `roms/nc1020.fls`：1,048,576 bytes（1 MiB）
-
-NC1020 上游仓库中公开列出了这两个文件，但上游 BSD-3-Clause 源码许可证不自动授予 ROM/固件镜像的再分发权。本工程不镜像、不打包这些文件。请仅使用你有权使用的镜像。上游 README 也提醒，其作者找到的 ROM 可能存在游戏物品保存问题。
-
-## 正式安装包
-
-只有在 ARM 程序和两份可合法使用的游戏镜像齐备后，才运行：
+编译完成后，运行：
 
 ```sh
 ./scripts/package-kual.sh
 ```
 
-生成 `Kindle-Golden-Hero-KPW1-install.zip`。安装目录独立于 WordScreen，不覆盖 WordScreen 文件。
+或由 GitHub Actions 自动生成 ROM-free 安装包。生成的 ZIP 只包含模拟器程序、KUAL 启动器和说明文档，不需要在编译或打包时提供 ROM，也不会包含个人存档。安装包内的 `PRIVATE-ROM-SETUP.md` 说明了 Kindle 端的私有目录配置。
 
 ## 当前尚未完成
 
 1. 尚未产出真正的 KPW1 ARM 游戏 ELF。
 2. 尚未进行 framebuffer 实际绘制与刷新实机测试。
 3. 触摸坐标范围已确认，仍需实机点按测试验证按键热区。
-4. 尚未取得可合法使用的游戏 ROM/Flash 镜像。
+4. 尚未配置来源和使用权限均已确认的个人 ROM/Flash 镜像。
 5. 尚未进行 KPW1 实机游戏、触摸、存档、休眠和长时间运行测试。

@@ -2,7 +2,7 @@
 
 An experimental port of the NC1020 emulator core to the first-generation Kindle Paperwhite. The goal is to run **Golden Hero Tan Shuo (黄金英雄坛说)** on the KPW1 e-ink display with a KUAL launcher and touchscreen controls.
 
-**Status: v0.9.1 ROM-free KUAL miniature interactive town test.** The KPW1 touch coordinates have been confirmed on hardware. The controls test restores the pre-test framebuffer and sends a full-screen refresh on exit. v0.9.1 adds a standalone, original miniature town interaction test (movement, key-hold repeat, collision, NPC dialog) and dirty-rectangle LCD refresh; this is not the original game. The game loop now holds NC1020 keys while a virtual button is held, and a protected fullscreen test mode can validate the controls without ROM images. The game itself still requires separately obtained, legally usable NC1020 images.
+**Status: v0.9.2 private external ROM/data loading.** KPW1 display and touch coordinates have been confirmed on hardware. v0.9.1 adds a ROM-free miniature town test; v0.9.2 moves user-provided NC1020 images and mutable saves completely outside the app installation directory. The KUAL launcher sets `GOLDEN_HERO_PRIVATE_DIR` to `/mnt/us/documents/GoldenHeroPrivate`. GitHub Actions and install ZIPs never fetch, bundle, or distribute game images.
 
 [简体中文说明](README_中文.md) · [Changelog](CHANGELOG.md)
 
@@ -30,19 +30,23 @@ The expected executable is `build-armel/golden_hero`. A successful cross-build i
 
 ## Game images are not included
 
-The emulator expects these files, which are deliberately not included in this repository:
+The emulator reads these files from the Kindle user's private data area, not from the app directory:
 
-- `roms/obj_lu.bin` (24 MiB)
-- `roms/nc1020.fls` (1 MiB)
+- `/mnt/us/documents/GoldenHeroPrivate/roms/obj_lu.bin` (25,165,824 bytes)
+- `/mnt/us/documents/GoldenHeroPrivate/roms/nc1020.fls` (1,048,576 bytes)
 
-The NC1020 source-code license does not automatically grant redistribution rights for ROM or firmware images. Only use image files that you are legally entitled to use.
+Mutable NOR Flash and state are kept in the sibling `data/` folder. The original `roms/nc1020.fls` is copied on first launch and never used as the writable save file. The repository and installer deliberately do not fetch, bundle, or distribute these images. The NC1020 source-code license does not automatically license the binary images. Only use images you are legally entitled to use.
+
+See [PRIVATE-ROM-SETUP.md](docs/PRIVATE-ROM-SETUP.md) for the on-device folder setup.
 
 ## Current limitations
 
 - CI generates a ROM-free KUAL install ZIP with 45-second touch-control and LCD-layout previews, each using a 65-second fullscreen recovery watchdog.
+- The standard `scripts/package-kual.sh` entry point also creates a ROM-free installer; game images are never copied into it.
 - KPW1 display, grayscale refresh, and touch coordinate accuracy have been confirmed on the user's physical device.
 - v0.8 implements key-down/key-up hold behavior, but the no-ROM test validates only touch hitboxes and event state; actual in-game movement still awaits legally usable game images.
 - Save persistence and long-running game behavior remain to be tested.
+- KUAL always uses the external `GoldenHeroPrivate` folder; it does not fall back to ROMs placed beside the executable.
 - The included host mock is for build/regression checks only; it is not the game emulator.
 
 ## Project structure

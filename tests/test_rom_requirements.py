@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Host-only validation: --check-files must never load dummy ROM data."""
+"""Validate default and external private ROM paths without initializing the core."""
 from pathlib import Path
+import os
 import subprocess
 import tempfile
 
@@ -9,22 +10,40 @@ if not binary.is_file():
     print('Host mock has not been built; skipping ROM CLI test')
 else:
     with tempfile.TemporaryDirectory(prefix='golden_hero_rom_check_') as tmp:
-        root = Path(tmp)
-        def call(*args):
-            return subprocess.run([str(binary), *args], cwd=root,
+        root = Path(tmp) / 'cwd'
+        root.mkdir()
+        private = Path(tmp) / 'private'
+        def call(*args, private_dir=None):
+            env = os.environ.copy()
+            env.pop('GOLDEN_HERO_PRIVATE_DIR', None)
+            if private_dir is not None:
+                env['GOLDEN_HERO_PRIVATE_DIR'] = str(private_dir)
+            return subprocess.run([str(binary), *args], cwd=root, env=env,
                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE).returncode
-        assert call('--check-files') == 3, 'Missing ROM files must fail'
-        assert call('--display-test') == 10, 'Display test bypasses ROM requirement and fails only on missing host fb0'
-        assert call('--controls-test') == 10, 'Controls test bypasses ROM requirement and fails only on missing host fb0'
-        assert call('--ui-test') == 10, 'UI preview bypasses ROM requirement and fails only on missing host fb0'
-        assert call('--demo-test') == 10, 'Town demo bypasses ROM requirement and fails only on missing host fb0'
+
+        assert call('--check-files') == 3, 'Missing default ROM files must fail'
+        for flag in ('--display-test', '--controls-test', '--ui-test', '--demo-test'):
+            assert call(flag) == 10, f'{flag} must bypass ROM requirement and fail only on missing host fb0'
+
+        # Default developer mode remains relative to the current directory.
         (root / 'roms').mkdir()
         (root / 'roms/obj_lu.bin').touch()
         (root / 'roms/nc1020.fls').touch()
-        assert call('--check-files') == 3, 'Wrong sized ROM files must fail'
+        assert call('--check-files') == 3, 'Wrong-sized default ROM files must fail'
         with open(root / 'roms/obj_lu.bin', 'wb') as f:
             f.truncate(25165824)
         with open(root / 'roms/nc1020.fls', 'wb') as f:
             f.truncate(1048576)
-        assert call('--check-files') == 0, 'Valid sizes must pass without initializing emulator'
-    print('ROM size and ROM-free display-test argument checks passed.')
+        assert call('--check-files') == 0, 'Valid default sizes must pass'
+
+        # Explicit private root overrides the app/CWD completely.
+        private_roms = private / 'roms'
+        private_roms.mkdir(parents=True)
+        with open(private_roms / 'obj_lu.bin', 'wb') as f:
+            f.truncate(25165824)
+        with open(private_roms / 'nc1020.fls', 'wb') as f:
+            f.truncate(1048576)
+        assert call('--check-files', private_dir=private) == 0, 'External private ROM path must pass'
+        (private_roms / 'nc1020.fls').unlink()
+        assert call('--check-files', private_dir=private) == 3, 'Must not fall back to app-local ROMs'
+    print('ROM path tests passed: default, external private root, strict no-fallback, exact sizes.')

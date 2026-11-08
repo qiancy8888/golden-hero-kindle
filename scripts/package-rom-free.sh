@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 BIN=build-armel/golden_hero
-OUT=Kindle-Golden-Hero-KPW1-v0.9.1-ROM-free.zip
+OUT=Kindle-Golden-Hero-KPW1-v0.9.2-ROM-free.zip
 STAGE=build-rom-free-root
 
 [ -s "$BIN" ] || { echo "Missing ARM binary. Run scripts/build-armel.sh first." >&2; exit 2; }
@@ -23,6 +23,7 @@ cp "$BIN" "$STAGE/golden_hero/golden_hero"
 cp roms/READ_ME.txt "$STAGE/golden_hero/roms/"
 cp data/READ_ME.txt "$STAGE/golden_hero/data/"
 cp README_中文.md "$STAGE/golden_hero/"
+cp docs/PRIVATE-ROM-SETUP.md "$STAGE/golden_hero/PRIVATE-ROM-SETUP.md"
 cp -R kual/extensions/golden_hero "$STAGE/extensions/"
 cp -R kual/extensions/GoldenHeroFullscreen "$STAGE/extensions/"
 cp kual/golden_hero_diagnostics/raw-touch.lua "$STAGE/golden_hero_diagnostics/"
@@ -39,6 +40,7 @@ with ZipFile(output, 'w', ZIP_DEFLATED, compresslevel=9) as archive:
 with ZipFile(output) as archive:
     names = archive.namelist()
     assert 'golden_hero/golden_hero' in names
+    assert 'golden_hero/PRIVATE-ROM-SETUP.md' in names
     assert 'extensions/golden_hero/menu.json' in names
     assert 'extensions/golden_hero/display-test.sh' in names
     assert 'extensions/GoldenHeroFullscreen/guarded-test.sh' in names
@@ -47,6 +49,7 @@ with ZipFile(output) as archive:
     assert 'extensions/GoldenHeroFullscreen/test-demo.sh' in names
     assert 'golden_hero_diagnostics/raw-touch.lua' in names
     assert not any(name.endswith(('obj_lu.bin','nc1020.fls', 'nc1020.sts')) for name in names)
+    assert not any(name.startswith('documents/GoldenHeroPrivate/') for name in names)
     assert archive.getinfo('golden_hero/golden_hero').external_attr >> 16 & 0o111
     assert archive.getinfo('extensions/GoldenHeroFullscreen/test-controls.sh').external_attr >> 16 & 0o111
     assert archive.getinfo('extensions/GoldenHeroFullscreen/test-ui.sh').external_attr >> 16 & 0o111

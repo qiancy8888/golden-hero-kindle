@@ -1,16 +1,40 @@
 #!/bin/sh
 # KUAL launcher for the KPW1 Golden Hero port.
 cd /mnt/us/golden_hero || exit 1
-mkdir -p data logs
+mkdir -p logs
 
 if [ ! -x ./golden_hero ]; then
   echo "Missing executable /mnt/us/golden_hero/golden_hero" >> logs/launcher.log
   exit 2
 fi
-if [ ! -s roms/obj_lu.bin ] || [ ! -s roms/nc1020.fls ]; then
-  echo "Game images missing. Read roms/READ_ME.txt; no ROM is bundled." >> logs/launcher.log
+
+# User images and mutable saves live outside the app install directory.
+PRIVATE_ROOT="${GOLDEN_HERO_PRIVATE_DIR:-/mnt/us/documents/GoldenHeroPrivate}"
+ROM_DIR="$PRIVATE_ROOT/roms"
+DATA_DIR="$PRIVATE_ROOT/data"
+if ! mkdir -p "$ROM_DIR" "$DATA_DIR"; then
+  echo "Cannot create private data directory: $PRIVATE_ROOT" >> logs/launcher.log
   exit 3
 fi
+if [ ! -s "$ROM_DIR/obj_lu.bin" ] || [ ! -s "$ROM_DIR/nc1020.fls" ]; then
+  {
+    echo "NC1020 game images are missing."
+    echo "Expected private files:"
+    echo "  $ROM_DIR/obj_lu.bin (25,165,824 bytes)"
+    echo "  $ROM_DIR/nc1020.fls (1,048,576 bytes)"
+    echo "See /mnt/us/golden_hero/PRIVATE-ROM-SETUP.md."
+    echo "No ROM is downloaded, copied from the app directory, or bundled."
+  } >> logs/launcher.log
+  exit 3
+fi
+ROM_SIZE=$(wc -c < "$ROM_DIR/obj_lu.bin" | tr -d ' ')
+FLASH_SIZE=$(wc -c < "$ROM_DIR/nc1020.fls" | tr -d ' ')
+if [ "$ROM_SIZE" != "25165824" ] || [ "$FLASH_SIZE" != "1048576" ]; then
+  echo "NC1020 image size mismatch: obj_lu.bin=$ROM_SIZE nc1020.fls=$FLASH_SIZE" >> logs/launcher.log
+  exit 3
+fi
+GOLDEN_HERO_PRIVATE_DIR="$PRIVATE_ROOT"
+export GOLDEN_HERO_PRIVATE_DIR
 
 # Resolve LIPC binaries without relying on `command -v` (not present in
 # some legacy Kindle /bin/sh builds).
