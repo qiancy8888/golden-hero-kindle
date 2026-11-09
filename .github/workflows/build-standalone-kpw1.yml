@@ -9,12 +9,15 @@ on:
       - 'kindle/fb.*'
       - 'kindle/touch.*'
       - 'kindle/standalone.cpp'
+      - 'kindle/save_file.*'
       - 'kual/extensions/GoldenHeroFullscreen/guarded-test.sh'
       - 'kual/extensions/GoldenHeroStandalone/**'
       - 'scripts/build-armel.sh'
       - 'scripts/bootstrap-kindle5-toolchain.sh'
       - 'scripts/package-standalone.py'
       - 'tests/test_opening.cpp'
+      - 'tests/test_save_file.cpp'
+      - 'tests/test_standalone_guard.py'
       - 'docs/STANDALONE.md'
       - 'CMakeLists.txt'
       - '.github/workflows/build-standalone-kpw1.yml'
@@ -34,6 +37,7 @@ jobs:
           ctest --test-dir build-standalone-host --output-on-failure
           sh -n kual/extensions/GoldenHeroFullscreen/guarded-test.sh
           sh -n kual/extensions/GoldenHeroStandalone/launch.sh
+          python3 tests/test_standalone_guard.py
       - name: Install Kindle5 cross-toolchain
         run: |
           sudo apt-get update
@@ -46,5 +50,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: golden-hero-kpw1-standalone-${{ github.sha }}
-          path: Kindle-Golden-Hero-KPW1-Standalone-v0.1.0.zip
+          path: Kindle-Golden-Hero-KPW1-Standalone-v0.2.0.zip
           if-no-files-found: error

@@ -1,6 +1,6 @@
 # Golden Hero on Kindle Paperwhite 1 (KPW1)
 
-**Standalone preview v0.1.0** includes a playable Ping’an Town opening with Chinese dialogue and the stone delivery job. It starts from its own KUAL menu and runs offline on KPW1 firmware 5.6.1.1. See the [standalone build and install guide](docs/STANDALONE.md).
+**Standalone campaign preview v0.2.0** includes character creation, two-slot saves, combat, sect training and a playable eight-altar campaign. It runs offline on KPW1 firmware 5.6.1.1. See the [standalone build and install guide](docs/STANDALONE.md) and [original game coverage](docs/ORIGINAL-COVERAGE.md).
 
 ## NC1020 emulator track
 

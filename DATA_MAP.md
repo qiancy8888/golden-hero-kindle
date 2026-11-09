@@ -1,13 +1,13 @@
 # 数据与来源
 
-| 数据 | 位置 | 用途 |
+| 数据 | 位置 | 说明 |
 | --- | --- | --- |
-| 镇西、镇中、镇东 | `game/town.cpp` | 19×11 地块、碰撞、NPC 位置和东西出口 |
-| 会话状态 | `game/town.h` | 角色位置、朝向、任务阶段、实战经验、潜能 |
-| 画面和触摸区 | `game/view.cpp` | 376×512 单色画面、16×16 图块、按键坐标和变化矩形 |
-| 字形 | `game/opening_glyphs.inc`、`game/FONT-OFL.txt` | Unifont 16.0.04 的中文字形与 ASCII 子集 |
-| KUAL 日志 | `/mnt/us/golden_hero_standalone/logs/opening-v0.1.0.log` | 设备识别、退出原因、刷新及恢复结果 |
+| 地点与居民 | `game/world.cpp` | 场景编号、地形、NPC、相邻出口和八坛解锁 |
+| 角色与道具 | `game/rpg.*` | 四项先天属性、年龄、气血内力、食饮、钱、经验、装备和门派 |
+| 进度 | `game/town.*` | 位置与朝向、石料和除恶差事、八坛进度、家园标记与随机种子 |
+| 存档编码 | `game/save.*` | `GHKP` 标记、版本 1、递增代号、固定小端字段与 CRC32 |
+| 存档文件 | `golden_hero_standalone/saves/journey.0` 和 `journey.1` | 由 `kindle/save_file.cpp` 交替写入，读档时选代号最新的有效槽 |
+| 图块与字体 | `game/view.cpp`、`game/opening_glyphs.inc` | 自制图块与 GNU Unifont 字形子集 |
+| 设备日志 | `golden_hero_standalone/logs/standalone.log` | KUAL 启停、刷新和恢复结果 |
 
-用户提供的固件、Flash 镜像和状态仅供离线核对。已在电脑上用这组文件启动黄金版，查看序章和选角。Flash 中已确认「平安镇」「石料」、送往工地和奖励经验／潜能。原始地图坐标、完整对话和奖励公式还需核对。试玩地图、图块和对白为本项目编写。
-
-当前角色预置 1000 实战经验，完成一次运石奖励 40 实战经验与 20 潜能。数值为试玩配置。游戏状态保存在进程内存中。
+原始 NC1020 固件、Flash 和状态文件留在原位置供离线核对。已核对及待核对条目分别记录在 [核对清单](docs/ORIGINAL-COVERAGE.md)。

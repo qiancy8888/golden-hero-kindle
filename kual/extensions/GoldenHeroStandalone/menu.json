@@ -1,7 +1,7 @@
 {
   "items": [
     {
-      "name": "平安镇试玩（45 秒自动退出）",
+      "name": "开始游戏",
       "priority": 0,
       "action": "./launch.sh"
     }

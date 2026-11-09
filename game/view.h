@@ -19,7 +19,7 @@ struct Rect {
     int h;
 };
 
-enum class Action { None, Up, Down, Left, Right, Confirm, Back, Exit };
+enum class Action { None, Up, Down, Left, Right, Confirm, Back, Menu, Exit };
 
 Action hit_test(Point point);
 bool direction_for(Action action, Direction& direction);

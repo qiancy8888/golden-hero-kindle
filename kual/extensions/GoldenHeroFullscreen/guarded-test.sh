@@ -1,11 +1,11 @@
 #!/bin/sh
-# KPW1 FW 5.6.1.1 ONLY: reversible, time-limited fullscreen guard.
+# KPW1 FW 5.6.1.1 ONLY: reversible fullscreen guard.
 # Do not STOP/kill Xorg or stop framework. Preserve WordScreen/KOReader.
 MODE="$1"
 case "$MODE" in display|touch|controls|ui|demo|game|standalone) ;; *) exit 2 ;; esac
 if [ "$MODE" = standalone ]; then
   LOG_DIR=/mnt/us/golden_hero_standalone/logs
-  LOG_NAME=opening-v0.1.0.log
+  LOG_NAME=standalone.log
 else
   LOG_DIR=/mnt/us/golden_hero/logs
   LOG_NAME="fullscreen-v0.9.6-$MODE.log"
@@ -64,12 +64,22 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   exit 9
 fi
 printf "%s\n" "$$" > "$LOCK_DIR/pid"
+if [ "$MODE" = standalone ]; then
+  GOLDEN_HERO_HEARTBEAT="$LOCK_DIR/heartbeat"
+  GOLDEN_HERO_SAVE_DIR=/mnt/us/golden_hero_standalone/saves
+  export GOLDEN_HERO_HEARTBEAT GOLDEN_HERO_SAVE_DIR
+  if ! mkdir -p "$GOLDEN_HERO_SAVE_DIR"; then
+    rm -f "$LOCK_DIR/pid"
+    rmdir "$LOCK_DIR"
+    exit 3
+  fi
+fi
 if [ "$MODE" = game ]; then
   PRIVATE_ROOT="${GOLDEN_HERO_PRIVATE_DIR:-/mnt/us/documents/GoldenHeroPrivate}"
   export GOLDEN_HERO_PRIVATE_DIR="$PRIVATE_ROOT"
   if [ ! -s "$PRIVATE_ROOT/roms/obj_lu.bin" ] || [ ! -s "$PRIVATE_ROOT/roms/nc1020.fls" ]; then
     echo 'ERROR: Private NC1020 images missing. No fullscreen session started.'
-    rm -f "$LOCK_DIR/pid" >/dev/null 2>&1 || true
+    rm -f "$LOCK_DIR/pid" "$LOCK_DIR/heartbeat" "$LOCK_DIR/child" >/dev/null 2>&1 || true
     rmdir "$LOCK_DIR" >/dev/null 2>&1 || true
     exit 3
   fi
@@ -110,16 +120,64 @@ trap 'exit 129' 1
 trap 'exit 130' 2
 trap 'exit 131' 3
 trap 'exit 143' 15
-(
-  trap '' 1 2 3 15
-  sleep 65
+owns_screen() {
+  [ -f "$LOCK_DIR/pid" ] && IFS= read -r owner < "$LOCK_DIR/pid" && [ "$owner" = "$$" ]
+}
+recover_screen() {
   "$KILLALL" -CONT awesome >/dev/null 2>&1 || true
   if [ -n "$LIPC" ]; then
     "$LIPC" com.lab126.pillow interrogatePillow '{"pillowId": "default_status_bar", "function": "nativeBridge.showMe();"}' >/dev/null 2>&1 || true
   fi
-) </dev/null >/dev/null 2>&1 &
+}
+if [ "$MODE" = standalone ]; then
+  (
+    trap - 0
+    trap 'exit 0' 1 2 3 15
+    stale=0
+    previous=''
+    while owns_screen && kill -0 "$$" 2>/dev/null; do
+      sleep 2
+      beat=''
+      if [ -f "$GOLDEN_HERO_HEARTBEAT" ]; then
+        IFS= read -r beat < "$GOLDEN_HERO_HEARTBEAT" || true
+      fi
+      if [ -n "$beat" ] && [ "$beat" != "$previous" ]; then
+        previous="$beat"
+        stale=0
+      else
+        stale=$((stale + 1))
+      fi
+      [ "$stale" -lt 12 ] || break
+    done
+    owns_screen || exit 0
+    echo 'Standalone watchdog: launcher gone or game stopped responding.'
+    kill -TERM "$$" 2>/dev/null || true
+    sleep 4
+    owns_screen || exit 0
+    child=''
+    if [ -f "$LOCK_DIR/child" ]; then IFS= read -r child < "$LOCK_DIR/child" || true; fi
+    case "$child" in
+      ''|*[!0-9]*|0|1) ;;
+      *)
+        kill -TERM "$child" 2>/dev/null || true
+        sleep 2
+        kill -KILL "$child" 2>/dev/null || true
+        ;;
+    esac
+    owns_screen || exit 0
+    recover_screen
+    rm -f "$LOCK_DIR/pid" "$LOCK_DIR/heartbeat" "$LOCK_DIR/child"
+    rmdir "$LOCK_DIR" || true
+  ) </dev/null &
+else
+  (
+    trap '' 1 2 3 15
+    sleep 65
+    recover_screen
+  ) </dev/null >/dev/null 2>&1 &
+fi
 WATCHDOG_PID=$!
-echo "Recovery watchdog PID: $WATCHDOG_PID (65-second fallback)"
+echo "Recovery watchdog PID: $WATCHDOG_PID"
 if [ -n "$LIPC" ]; then
   if "$LIPC" com.lab126.pillow interrogatePillow '{"pillowId": "default_status_bar", "function": "nativeBridge.hideMe();"}' >/dev/null 2>&1; then
     PILLOW_HIDDEN=1
@@ -151,22 +209,22 @@ elif [ "$MODE" = demo ]; then
   echo 'Starting ROM-free miniature town walking and interaction test (45-second maximum).'
   "$EXE" --demo-test
   RET=$?
-elif [ "$MODE" = game ] || [ "$MODE" = standalone ]; then
-  if [ "$MODE" = standalone ]; then
-    echo 'Starting the standalone opening (45-second maximum).'
-    OPTION=--protected-session
-    WATCHDOG_SECONDS=55
-  else
-    echo 'Starting protected REAL NC1020 AUTO-GAME test: 30s; synthetic F11; MAIN/SAVE disabled; no state/Flash writes.'
-    OPTION=--safe-game-test
-    WATCHDOG_SECONDS=45
-  fi
-  "$EXE" "$OPTION" &
+elif [ "$MODE" = standalone ]; then
+  echo 'Starting standalone Golden Hero (heartbeat monitored).'
+  "$EXE" --protected-session &
+  GAME_PID=$!
+  printf '%s\n' "$GAME_PID" > "$LOCK_DIR/child"
+  wait "$GAME_PID"
+  RET=$?
+  GAME_PID=''
+elif [ "$MODE" = game ]; then
+  echo 'Starting protected REAL NC1020 AUTO-GAME test: 30s; synthetic F11; MAIN/SAVE disabled; no state/Flash writes.'
+  "$EXE" --safe-game-test &
   GAME_PID=$!
   # Independent recovery if the fullscreen child fails to exit.
   (
     trap '' 1 2 3 15
-    sleep "$WATCHDOG_SECONDS"
+    sleep 45
     kill -TERM "$GAME_PID" >/dev/null 2>&1 || true
     sleep 3
     kill -KILL "$GAME_PID" >/dev/null 2>&1 || true

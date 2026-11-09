@@ -12,7 +12,7 @@ def main():
     parser.add_argument("hex_gz", type=Path)
     args = parser.parse_args()
 
-    text = "".join((GAME / name).read_text(encoding="utf-8") for name in ("town.cpp", "view.cpp"))
+    text = "".join(path.read_text(encoding="utf-8") for path in sorted(GAME.glob("*.cpp")))
     codes = set(range(0x20, 0x7f)) | {ord(char) for char in text if ord(char) > 0x7f}
     rows = {}
     with gzip.open(args.hex_gz, "rt", encoding="ascii") as source:

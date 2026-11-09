@@ -1,54 +1,86 @@
 #pragma once
 
+#include "world.h"
+
+#include <string>
+#include <vector>
+
 namespace golden {
-constexpr int town_width = 19;
-constexpr int town_height = 11;
-constexpr int starting_experience = 1000;
-
-enum class Direction { Up, Down, Left, Right };
-enum class Area { West, Center, East };
-enum class Page { Title, Town, Dialogue };
+enum class Page { Title, Create, Town, Actions, Menu, Status, Inventory, Skills, Shop, Battle, Ending };
 enum class Job { Available, Carrying, Complete };
-enum class Tile { Grass, Road, Wall, Tree, Stones, Water };
+enum class Hunt { None, Tracking, Report };
 
-struct Point {
-    int x;
-    int y;
-};
-
-struct Resident {
-    Point position;
-    const char* name;
+struct Journey {
+    Hero hero;
+    Area area = Area::Center;
+    Point position{9, 5};
+    Direction facing = Direction::Up;
+    Job job = Job::Available;
+    Hunt hunt = Hunt::None;
+    uint8_t altar = 0;
+    bool met_guide = false;
+    bool has_house = false;
+    uint16_t merit = 0;
+    uint32_t random = 0x47a91dc3;
+    bool valid() const;
 };
 
 class Town {
 public:
+    Town();
     Page page() const { return page_; }
-    Area area() const { return area_; }
-    Point player() const { return player_; }
-    Direction facing() const { return facing_; }
-    Job job() const { return job_; }
-    int experience() const { return experience_; }
-    int potential() const { return potential_; }
-    const Resident& resident() const;
-    Tile tile(Point point) const;
-    bool nearby() const;
-    const char* location() const;
+    Area area() const { return state_.area; }
+    Point player() const { return state_.position; }
+    Direction facing() const { return state_.facing; }
+    const Journey& journey() const { return state_; }
+    const Hero& hero() const { return state_.hero; }
+    const Resident* nearby() const;
+    const char* location() const { return location_name(area()); }
     const char* journal() const;
-    const char* dialogue() const;
+    const std::string& notice() const { return notice_; }
+    const char* title() const;
     const char* confirm_label() const;
+    std::string status_line() const;
+    std::string gate_hint() const;
+    int selection() const { return selected_; }
+    int menu_size() const { return static_cast<int>(menu_.size()); }
+    const std::string& menu_label(int row) const { return menu_[row].label; }
 
     bool move(Direction direction);
     bool confirm();
     bool back();
+    bool menu();
+    bool resume(const Journey& saved);
+    bool can_save() const;
+    bool take_save_request();
+    void save_result(bool success);
 
 private:
+    enum class Op { Create, Resume, Begin, Status, Inventory, Skills, Save, Return, Guide, LearnMap,
+                    TakeStone, DeliverStone, Bounty, ReportBounty, Shop, Buy, SellFish, Train,
+                    Join, Battle, Fight, Use, Rest, Fish, Mine, Forge, BuyHouse, Revive, ReadEnding };
+    struct Entry { std::string label; Op op; int value; };
+
+    void open(Page page);
+    void refresh();
+    void add(std::string label, Op op, int value = 0);
+    void execute(const Entry& entry);
+    void interact();
+    void change_draft(int amount);
+    void combat(BattleAction action);
+    void record(const char* message);
+
+    Journey state_;
+    Hero draft_;
     Page page_ = Page::Title;
-    Area area_ = Area::Center;
-    Point player_ = {9, 5};
-    Direction facing_ = Direction::Up;
-    Job job_ = Job::Available;
-    int experience_ = starting_experience;
-    int potential_ = 0;
+    const Resident* target_ = nullptr;
+    const Opponent* enemy_ = nullptr;
+    int enemy_health_ = 0;
+    int selected_ = 0;
+    bool has_hero_ = false;
+    bool save_pending_ = false;
+    bool save_feedback_ = false;
+    std::string notice_;
+    std::vector<Entry> menu_;
 };
 }

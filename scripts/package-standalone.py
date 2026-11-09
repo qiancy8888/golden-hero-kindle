@@ -6,7 +6,7 @@ import struct
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parent.parent
-NAME = "Kindle-Golden-Hero-KPW1-Standalone-v0.1.0.zip"
+NAME = "Kindle-Golden-Hero-KPW1-Standalone-v0.2.0.zip"
 
 
 def validate_binary(binary):

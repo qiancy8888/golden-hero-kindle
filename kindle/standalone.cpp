@@ -1,23 +1,33 @@
 #include "fb.h"
+#include "save_file.h"
 #include "touch.h"
 #include "view.h"
 
 #include <csignal>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <poll.h>
 #include <time.h>
+#include <unistd.h>
 #include <vector>
 
 namespace {
 constexpr int scale = 2;
-constexpr uint64_t session_ms = 45000;
+constexpr uint64_t heartbeat_interval_ms = 2000;
 constexpr uint64_t refresh_interval_ms = 220;
 constexpr uint64_t first_repeat_ms = 400;
 constexpr uint64_t repeat_ms = 280;
 volatile std::sig_atomic_t interrupted = 0;
 
 void stop(int) { interrupted = 1; }
+
+bool heartbeat(const char* path, uint64_t timestamp) {
+    std::FILE* file = std::fopen(path, "w");
+    if (!file) return false;
+    const bool wrote = std::fprintf(file, "%llu\n", static_cast<unsigned long long>(timestamp)) > 0;
+    return std::fclose(file) == 0 && wrote;
+}
 
 uint64_t now_ms() {
     timespec time{};
@@ -47,10 +57,15 @@ golden::Action action_at(const TouchPoint& point, int left) {
 
 int main(int argc, char** argv) {
     using namespace golden;
-    if (argc != 2 || std::strcmp(argv[1], "--protected-session") != 0) {
-        std::fputs("Start this preview from its KUAL menu.\n", stderr);
+    const char* heartbeat_path = std::getenv("GOLDEN_HERO_HEARTBEAT");
+    const char* save_directory = std::getenv("GOLDEN_HERO_SAVE_DIR");
+    if (argc != 2 || std::strcmp(argv[1], "--protected-session") != 0 ||
+        !heartbeat_path || !*heartbeat_path || !save_directory || !*save_directory) {
+        std::fputs("Start Golden Hero from its KUAL menu.\n", stderr);
         return 2;
     }
+    const pid_t launcher = getppid();
+    if (launcher <= 1 || !heartbeat(heartbeat_path, now_ms())) return 3;
     std::signal(SIGINT, stop);
     std::signal(SIGTERM, stop);
 
@@ -78,23 +93,38 @@ int main(int argc, char** argv) {
     uint8_t* visible = fb.data + static_cast<size_t>(fb.stride) * fb.var.yoffset;
     const std::vector<uint8_t> backup(visible, visible + visible_bytes);
     Town town;
+    SaveFile saves(save_directory);
+    Journey loaded;
+    const SaveStatus load_status = saves.load(loaded);
+    if (load_status == SaveStatus::Loaded) town.resume(loaded);
+    else if (load_status != SaveStatus::Missing) {
+        std::fprintf(stderr, "Standalone save load status: %d\n", static_cast<int>(load_status));
+        town.save_result(false);
+    }
     Frame previous, frame;
     render(town, previous);
     fb.rect(0, 0, left, fb.h, 255);
     fb.rect(left + view_width * scale, 0, left, fb.h, 255);
     bool display_ok = redraw(fb, left, previous, {0, 0, view_width, view_height});
-    const uint64_t started = now_ms();
-    uint64_t next_refresh = started + refresh_interval_ms;
+    uint64_t next_refresh = now_ms() + refresh_interval_ms;
+    uint64_t next_heartbeat = 0;
     uint64_t next_repeat = 0;
     Action active = Action::None;
     bool pending = false;
     bool exit_requested = false;
-    std::fprintf(stderr, "Standalone opening ready; EPDC=%s; maximum session=45s.\n",
+    std::fprintf(stderr, "Standalone game ready; EPDC=%s.\n",
                  display_ok ? "OK" : "FAILED");
 
-    while (display_ok && !exit_requested && !interrupted && now_ms() - started < session_ms) {
+    while (display_ok && !exit_requested && !interrupted) {
         TouchPoint point;
         const uint64_t now = now_ms();
+        if (now >= next_heartbeat) {
+            if (getppid() != launcher || !heartbeat(heartbeat_path, now)) {
+                std::fputs("Lost the fullscreen launcher heartbeat.\n", stderr);
+                break;
+            }
+            next_heartbeat = now + heartbeat_interval_ms;
+        }
         Direction direction;
         for (int events = 0; events < 16 && touch.poll_point(fb.w, fb.h, point); ++events) {
             const Action hit = action_at(point, left);
@@ -111,6 +141,7 @@ int main(int argc, char** argv) {
                 if (hit == active) {
                     if (active == Action::Confirm) pending |= town.confirm();
                     if (active == Action::Back) pending |= town.back();
+                    if (active == Action::Menu) pending |= town.menu();
                     if (active == Action::Exit) exit_requested = true;
                 }
                 active = Action::None;
@@ -122,6 +153,10 @@ int main(int argc, char** argv) {
         if (direction_for(active, direction) && now >= next_repeat) {
             pending |= town.move(direction);
             next_repeat = now + repeat_ms;
+        }
+        if (town.take_save_request() && town.can_save()) {
+            town.save_result(saves.write(town.journey()));
+            pending = true;
         }
         if (pending && now >= next_refresh) {
             render(town, frame);
@@ -146,8 +181,9 @@ int main(int argc, char** argv) {
     std::memcpy(visible, backup.data(), visible_bytes);
     const bool restored = fb.refresh(0, 0, fb.w, fb.h, true);
     fb.close_fb();
+    if ((exit_requested || interrupted) && town.can_save() && !saves.write(town.journey()))
+        std::fputs("Unable to save the final checkpoint.\n", stderr);
     std::fprintf(stderr, "Framebuffer restored: %s; exit=%s\n", restored ? "OK" : "FAILED",
-                 exit_requested ? "button" : interrupted ? "signal" :
-                 now_ms() - started >= session_ms ? "timeout" : "device error");
+                 exit_requested ? "button" : interrupted ? "signal" : "device error");
     return display_ok && restored ? 0 : 12;
 }

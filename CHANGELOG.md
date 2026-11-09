@@ -1,5 +1,12 @@
 # Changelog
 
+## Standalone v0.2.0 (2026-11-09)
+
+- Add a playable campaign from character creation through the eight altar battles, with 28 scenes, sects, equipment, shops and side activities.
+- Persist progress using two checksummed save slots. Verify fallback on a damaged slot and protect newer-format saves.
+- Replace the standalone session timer with a heartbeat watchdog and retain the single-instance framebuffer lock.
+- Add a host playthrough through the final encounter and a save-file recovery test.
+
 ## Standalone v0.1.0 (2026-11-09)
 
 - Reimplement the opening as an offline C++ game with three small Ping’an Town maps, NPC conversations and a stone delivery job.

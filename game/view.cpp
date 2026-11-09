@@ -23,6 +23,7 @@ struct Button {
 };
 
 constexpr Button buttons[] = {
+    {{17,  368, 47, 43}, Action::Menu, u8"菜单"},
     {{68,  368, 47, 43}, Action::Up, u8"上"},
     {{17,  418, 47, 43}, Action::Left, u8"左"},
     {{68,  418, 47, 43}, Action::Down, u8"下"},
@@ -73,7 +74,8 @@ int text_width(const char* text, int scale) {
     return width;
 }
 
-void print(Frame& frame, int x, int y, const char* text, int scale = 1, bool black = true) {
+void print(Frame& frame, int x, int y, const char* text, int scale = 1,
+           bool black = true, int right = view_width) {
     const int left = x;
     while (*text) {
         if (*text == '\n') {
@@ -83,6 +85,7 @@ void print(Frame& frame, int x, int y, const char* text, int scale = 1, bool bla
             continue;
         }
         const Glyph& glyph = next_glyph(text);
+        if (x + glyph.width * scale > right) return;
         for (int row = 0; row < 16; ++row)
             for (int col = 0; col < glyph.width; ++col)
                 if (glyph.rows[row] & (1u << (glyph.width - 1 - col)))
@@ -135,7 +138,7 @@ void map(Frame& frame, const Town& town, int map_y) {
         for (int col = 0; col < town_width; ++col) {
             const int x = map_x + col * 16;
             const int y = map_y + row * 16;
-            switch (town.tile({col, row})) {
+            switch (terrain(town.area(), {col, row})) {
             case Tile::Tree: sprite(frame, x, y, tree); break;
             case Tile::Wall: sprite(frame, x, y, wall); break;
             case Tile::Stones: sprite(frame, x, y, stones); break;
@@ -146,12 +149,18 @@ void map(Frame& frame, const Town& town, int map_y) {
             case Tile::Road:
                 fill(frame, {x + 2, y + 2 + (col % 3) * 11 / 2, 3, 1});
                 break;
+            case Tile::Gate:
+                outline(frame, {x + 4, y + 3, 8, 10});
+                fill(frame, {x + 7, y + 6, 2, 4});
+                break;
             }
         }
     }
 
-    const Point npc = town.resident().position;
-    sprite(frame, map_x + npc.x * 16, map_y + npc.y * 16, person);
+    for (const auto& npc : residents(town.area())) {
+        if (npc.role == Role::None) continue;
+        sprite(frame, map_x + npc.position.x * 16, map_y + npc.position.y * 16, person);
+    }
     const Point pos = town.player();
     const int x = map_x + pos.x * 16, y = map_y + pos.y * 16;
     fill(frame, {x, y, 16, 16}, false);
@@ -190,24 +199,37 @@ void render(const Town& town, Frame& frame) {
     fill(frame, {17, 354, 342, 1});
     if (town.page() == Page::Title) {
         centered(frame, {17, 10, 342, 40}, u8"文曲星经典 · Kindle 独立版");
-        centered(frame, {17, 63, 342, 65}, u8"黄金英雄坛说", 3);
-        map(frame, town, 143);
-        centered(frame, {17, 329, 342, 18}, u8"平安镇试玩");
+        centered(frame, {17, 68, 342, 65}, town.title(), 3);
+        centered(frame, {17, 139, 342, 30}, u8"平安镇与暗黑八坛");
     } else {
-        print(frame, 17, 15, town.location(), 2);
-        char status[80];
-        std::snprintf(status, sizeof(status), u8"实战经验 %d    潜能 %d", town.experience(), town.potential());
-        print(frame, 37, 65, status);
+        print(frame, 17, 15, town.title(), 2);
+        if (town.page() != Page::Create) print(frame, 25, 65, town.status_line().c_str());
+    }
+    if (town.page() == Page::Town) {
         map(frame, town, 90);
         outline(frame, {34, 276, 308, 77});
-        if (town.page() == Page::Dialogue) {
-            fill(frame, {35, 277, 306, 18});
-            print(frame, 44, 278, town.resident().name, 1, false);
-            print(frame, 44, 295, town.dialogue());
-        } else {
-            print(frame, 44, 282, town.journal());
-            print(frame, 44, 305, town.nearby() ? town.resident().name : u8"方向键行走，靠近人物可交谈");
+        print(frame, 44, 282, town.journal(), 1, true, 334);
+        const auto* npc = town.nearby();
+        const auto hint = town.gate_hint();
+        print(frame, 44, 306, !town.notice().empty() ? town.notice().c_str() :
+              npc ? npc->name : u8"靠近人物可交谈", 1, true, 334);
+        print(frame, 44, 328, hint.c_str(), 1, true, 334);
+    } else {
+        constexpr int visible = 7;
+        const int start = std::max(0, town.selection() - visible + 1);
+        const int top = town.page() == Page::Title ? 195 : 93;
+        for (int row = start; row < std::min(town.menu_size(), start + visible); ++row) {
+            const int y = top + (row - start) * 29;
+            const bool selected = town.selection() == row;
+            if (selected) fill(frame, {24, y, 328, 26});
+            else outline(frame, {24, y, 328, 26});
+            print(frame, 34, y + 5, town.menu_label(row).c_str(), 1, !selected, 343);
         }
+        if (!town.notice().empty()) print(frame, 26, 321, town.notice().c_str(), 1, true, 352);
+        else if (town.page() == Page::Create)
+            print(frame, 26, 321, u8"左右调整，上下选择。");
+        else if (town.page() == Page::Ending)
+            print(frame, 26, 321, u8"八坛平定，平安镇重归安宁。");
     }
     for (const Button& button : buttons) {
         if (button.action == Action::Confirm) {
@@ -218,7 +240,8 @@ void render(const Town& town, Frame& frame) {
             centered(frame, button.bounds, button.text);
         }
     }
-    centered(frame, {17, 476, 342, 18}, u8"长按方向可连续移动 · 试玩限时");
+    centered(frame, {17, 476, 342, 18}, town.page() == Page::Town ?
+             u8"长按方向连续移动 · 菜单可存档" : u8"上下选择 · 确定执行");
 }
 
 Rect changed_region(const Frame& before, const Frame& after) {
