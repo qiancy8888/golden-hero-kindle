@@ -1,5 +1,9 @@
 # Golden Hero on Kindle Paperwhite 1 (KPW1)
 
+**Standalone preview v0.1.0** includes a playable Ping’an Town opening with Chinese dialogue and the stone delivery job. It starts from its own KUAL menu and runs offline on KPW1 firmware 5.6.1.1. See the [standalone build and install guide](docs/STANDALONE.md).
+
+## NC1020 emulator track
+
 An experimental port of the NC1020 emulator core to the first-generation Kindle Paperwhite. The goal is to run **Golden Hero Tan Shuo (黄金英雄坛说)** on the KPW1 e-ink display with a KUAL launcher and touchscreen controls.
 
 **Status: v0.9.6 UI refinement (direct-to-game boot still under physical verification).** KPW1 display and touch coordinates have been confirmed on hardware. v0.9.1 adds a ROM-free miniature town test; v0.9.2 moves user-provided NC1020 images and mutable saves completely outside the app installation directory. The KUAL launcher sets `GOLDEN_HERO_PRIVATE_DIR` to `/mnt/us/documents/GoldenHeroPrivate`. After the report of an actual KPW1 OS reboot, unprotected persistent launches remain disabled. The protected 30s diagnostic still waits 6s for NC1020 firmware startup, sends F11/GAME for 300ms, then waits 750ms before drawing the first LCD frame. The touch UI removes X/Shift-X and Y/Shift-Y and enlarges the 160x80 LCD to 736x368 on the 758px-wide KPW1. MAIN and SAVE remain disabled in the protected test; no persistent save data is loaded or written. Direct-to-game boot remains unverified on the physical Kindle. GitHub Actions and install ZIPs never fetch, bundle, or distribute game images.

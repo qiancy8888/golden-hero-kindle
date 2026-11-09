@@ -2,12 +2,18 @@
 # KPW1 FW 5.6.1.1 ONLY: reversible, time-limited fullscreen guard.
 # Do not STOP/kill Xorg or stop framework. Preserve WordScreen/KOReader.
 MODE="$1"
-case "$MODE" in display|touch|controls|ui|demo|game) ;; *) exit 2 ;; esac
-LOG_DIR=/mnt/us/golden_hero/logs
+case "$MODE" in display|touch|controls|ui|demo|game|standalone) ;; *) exit 2 ;; esac
+if [ "$MODE" = standalone ]; then
+  LOG_DIR=/mnt/us/golden_hero_standalone/logs
+  LOG_NAME=opening-v0.1.0.log
+else
+  LOG_DIR=/mnt/us/golden_hero/logs
+  LOG_NAME="fullscreen-v0.9.6-$MODE.log"
+fi
 mkdir -p "$LOG_DIR" || exit 3
-LOG="$LOG_DIR/fullscreen-v0.9.6-$MODE.log"
+LOG="$LOG_DIR/$LOG_NAME"
 exec >>"$LOG" 2>&1
-printf '\n==== Golden Hero KPW1 v0.9.6 %s (protected fullscreen, enlarged LCD) ====\n' "$MODE"
+printf '\n==== Golden Hero KPW1 %s (protected fullscreen) ====\n' "$MODE"
 date
 if ! grep -q 'Kindle 5\.6\.1\.1' /etc/prettyversion.txt 2>/dev/null; then
   echo 'ERROR: Unsupported firmware. KPW1 5.6.1.1 required. Nothing changed.'
@@ -30,9 +36,12 @@ if [ -z "$KILLALL" ]; then
 fi
 LIPC="$(find_program lipc-set-prop)"
 EXE=/mnt/us/golden_hero/golden_hero
-if [ "$MODE" = display ] || [ "$MODE" = controls ] || [ "$MODE" = ui ] || [ "$MODE" = demo ] || [ "$MODE" = game ]; then
+if [ "$MODE" = standalone ]; then
+  EXE=/mnt/us/golden_hero_standalone/golden_hero_standalone
+fi
+if [ "$MODE" != touch ]; then
   if [ ! -x "$EXE" ]; then
-    echo 'ERROR: Golden Hero KPW1 ARM executable is missing. Install v0.9.6 ROM-free package first.'
+    echo "ERROR: Golden Hero KPW1 ARM executable is missing: $EXE"
     exit 5
   fi
 else
@@ -142,14 +151,22 @@ elif [ "$MODE" = demo ]; then
   echo 'Starting ROM-free miniature town walking and interaction test (45-second maximum).'
   "$EXE" --demo-test
   RET=$?
-elif [ "$MODE" = game ]; then
-  echo 'Starting protected REAL NC1020 AUTO-GAME test: 30s; synthetic F11; MAIN/SAVE disabled; no state/Flash writes.'
-  "$EXE" --safe-game-test &
+elif [ "$MODE" = game ] || [ "$MODE" = standalone ]; then
+  if [ "$MODE" = standalone ]; then
+    echo 'Starting the standalone opening (45-second maximum).'
+    OPTION=--protected-session
+    WATCHDOG_SECONDS=55
+  else
+    echo 'Starting protected REAL NC1020 AUTO-GAME test: 30s; synthetic F11; MAIN/SAVE disabled; no state/Flash writes.'
+    OPTION=--safe-game-test
+    WATCHDOG_SECONDS=45
+  fi
+  "$EXE" "$OPTION" &
   GAME_PID=$!
-  # Independent recovery if the emulator blocks inside a core timeslice.
+  # Independent recovery if the fullscreen child fails to exit.
   (
     trap '' 1 2 3 15
-    sleep 45
+    sleep "$WATCHDOG_SECONDS"
     kill -TERM "$GAME_PID" >/dev/null 2>&1 || true
     sleep 3
     kill -KILL "$GAME_PID" >/dev/null 2>&1 || true

@@ -1,0 +1,50 @@
+name: Build standalone Golden Hero for Kindle PW1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, standalone-kpw1]
+    paths:
+      - 'game/**'
+      - 'kindle/fb.*'
+      - 'kindle/touch.*'
+      - 'kindle/standalone.cpp'
+      - 'kual/extensions/GoldenHeroFullscreen/guarded-test.sh'
+      - 'kual/extensions/GoldenHeroStandalone/**'
+      - 'scripts/build-armel.sh'
+      - 'scripts/bootstrap-kindle5-toolchain.sh'
+      - 'scripts/package-standalone.py'
+      - 'tests/test_opening.cpp'
+      - 'docs/STANDALONE.md'
+      - 'CMakeLists.txt'
+      - '.github/workflows/build-standalone-kpw1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  standalone:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test on the host without NC1020 dependencies
+        run: |
+          cmake -S . -B build-standalone-host -DGOLDEN_STANDALONE=ON
+          cmake --build build-standalone-host --parallel 2
+          ctest --test-dir build-standalone-host --output-on-failure
+          sh -n kual/extensions/GoldenHeroFullscreen/guarded-test.sh
+          sh -n kual/extensions/GoldenHeroStandalone/launch.sh
+      - name: Install Kindle5 cross-toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd
+          sh scripts/bootstrap-kindle5-toolchain.sh
+      - name: Build and verify KPW1 ARM soft-float executable
+        run: sh scripts/build-armel.sh --standalone
+      - name: Package KUAL standalone game
+        run: python3 scripts/package-standalone.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: golden-hero-kpw1-standalone-${{ github.sha }}
+          path: Kindle-Golden-Hero-KPW1-Standalone-v0.1.0.zip
+          if-no-files-found: error

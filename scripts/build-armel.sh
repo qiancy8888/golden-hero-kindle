@@ -2,6 +2,11 @@
 # Cross-compile for Kindle 4 / Touch / Paperwhite 1 (kindle5 ABI).
 set -eu
 cd "$(dirname "$0")/.."
+case "${1:-}" in
+  "") BUILD_DIR=build-armel; TARGET=golden_hero; STANDALONE=OFF ;;
+  --standalone) BUILD_DIR=build-standalone-armel; TARGET=golden_hero_standalone; STANDALONE=ON ;;
+  *) echo "Usage: $0 [--standalone]" >&2; exit 2 ;;
+esac
 PREFIX="${KINDLE5_PREFIX:-${HOME}/x-tools/arm-kindle5-linux-gnueabi/bin/arm-kindle5-linux-gnueabi}"
 CXX="${CXX:-${PREFIX}-g++}"
 
@@ -10,20 +15,21 @@ if [ ! -x "$CXX" ] && ! command -v "$CXX" >/dev/null 2>&1; then
   echo "Run scripts/bootstrap-kindle5-toolchain.sh first, or set KINDLE5_PREFIX." >&2
   exit 2
 fi
-if [ ! -f upstream/nc1020.cpp ]; then
+if [ "$STANDALONE" = OFF ] && [ ! -f upstream/nc1020.cpp ]; then
   echo "Fetching pinned, source-only NC1020 emulator code..."
   python3 scripts/fetch_upstream.py
 fi
 
-cmake -S . -B build-armel \
+cmake -S . -B "$BUILD_DIR" \
+  -DGOLDEN_STANDALONE="$STANDALONE" \
   -DCMAKE_SYSTEM_NAME=Linux \
   -DCMAKE_SYSTEM_PROCESSOR=arm \
   -DCMAKE_CXX_COMPILER="$CXX" \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG -mfloat-abi=soft -static-libstdc++ -static-libgcc"
-cmake --build build-armel --parallel 2
+cmake --build "$BUILD_DIR" --parallel 2
 
-BIN=build-armel/golden_hero
+BIN="$BUILD_DIR/$TARGET"
 command -v readelf >/dev/null 2>&1 || { echo "readelf is required for ABI verification" >&2; exit 3; }
 readelf -h "$BIN" | grep -q 'Machine:.*ARM' || { echo "Not an ARM ELF" >&2; exit 4; }
 if readelf -A "$BIN" | grep -q 'Tag_ABI_VFP_args: VFP registers'; then

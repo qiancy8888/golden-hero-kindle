@@ -1,5 +1,11 @@
 # Changelog
 
+## Standalone v0.1.0 (2026-11-09)
+
+- Reimplement the opening as an offline C++ game with three small Ping’an Town maps, NPC conversations and a stone delivery job.
+- Add a separate KUAL entry, a 45-second session with framebuffer recovery, and a Kindle5 ARM build and installer.
+- Test collision, map transitions, dialogue cancellation, one-time quest rewards and partial-screen update bounds.
+
 ## v0.9.6 (2026-11-08) — enlarged LCD and simplified touch controls
 - Remove the redundant on-screen X (Shift-X, 0x31) and Y (Shift-Y, 0x25) controls; retain FLY, MENU, OK, BACK, PGUP, PGDN, SAVE and EXIT.
 - Replace integer 4x rendering with fractional nearest-neighbour scaling. On the 758px-wide KPW1 display, the 160x80 NC1020 LCD now uses 736x368 pixels instead of 640x320 (about 15% larger in each dimension).
