@@ -148,9 +148,8 @@ void Town::refresh() {
     case Page::Skills:
         for (int i = 0; i < id(Skill::Count); ++i) {
             const Skill skill = static_cast<Skill>(i);
-            if (skill == Skill::Sect && hero().sect == Sect::None) continue;
-            const auto* label = skill == Skill::Sect ? sect_def(hero().sect).art : skill_name(skill);
-            add(numbered(label, hero().skills[i]), Op::Train, i);
+            if (hero().can_study(skill))
+                add(numbered(skill_name(skill), hero().skills[i]), Op::Train, i);
         }
         break;
     case Page::Actions:
@@ -164,14 +163,16 @@ void Town::refresh() {
         }
         if (hero().amount(Item::Fish)) add(u8"卖一尾鲤鱼", Op::SellFish);
         break;
-    case Page::Battle:
+    case Page::Battle: {
+        const Skill style = hero().special_style();
         add(u8"普通攻击", Op::Fight, id(BattleAction::Strike));
-        add(hero().sect == Sect::None ? u8"运力一击" : sect_def(hero().sect).art,
+        add(style == Skill::Legacy ? u8"运力一击" : skill_name(style),
             Op::Fight, id(BattleAction::Special));
         add(u8"防守调息", Op::Fight, id(BattleAction::Guard));
         add(u8"服用金创药", Op::Fight, id(BattleAction::Heal));
         add(u8"撤退", Op::Fight, id(BattleAction::Flee));
         break;
+    }
     case Page::Ending:
         add(u8"继续游历", Op::Return);
         break;
@@ -441,7 +442,7 @@ void Town::execute(const Entry& entry) {
         record(u8"气血和内力已恢复。");
         break;
     case Op::Fish:
-        if (!hero.amount(Item::FishingRod)) { notice_ = u8"先买一支钓竿。"; break; }
+        if (!hero.amount(Item::FishingRod)) { notice_ = u8"先买一支钓杆。"; break; }
         if (hero.add(Item::Fish, 1)) { hero.advance(); record(u8"钓到一尾鲤鱼。"); }
         else notice_ = u8"鱼篓已经装满。";
         break;

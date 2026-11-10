@@ -166,10 +166,10 @@ constexpr Passage links[] = {
     {A::Market,D::Right,A::Clinic,D::Left}, {A::Home,D::Down,A::Dojo,D::Up},
     {A::Snow,D::Left,A::FiveFinger,D::Right}, {A::Snow,D::Up,A::Spirit,D::Down},
     {A::Shang,D::Right,A::Forge,D::Left}, {A::Jade,D::Left,A::Peach,D::Right},
-    {A::Shang,D::Up,A::Green,D::Down}, {A::FiveFinger,D::Up,A::Earth,D::Down},
-    {A::Ice,D::Down,A::Scarlet,D::Up}, {A::Wudang,D::Up,A::Mountain,D::Down},
-    {A::Snow,D::Down,A::Tortoise,D::Up}, {A::Forest,D::Left,A::Purple,D::Right},
-    {A::Spirit,D::Up,A::Celestial,D::Down}, {A::Jade,D::Up,A::Dark,D::Down},
+    {A::Shang,D::Up,A::Green,D::Down}, {A::Spirit,D::Up,A::Earth,D::Down},
+    {A::FiveFinger,D::Up,A::Scarlet,D::Down}, {A::Forest,D::Left,A::Mountain,D::Right},
+    {A::Ice,D::Down,A::Tortoise,D::Up}, {A::Snow,D::Down,A::Purple,D::Up},
+    {A::Wudang,D::Up,A::Celestial,D::Down}, {A::Jade,D::Up,A::Dark,D::Down},
 };
 
 constexpr Opponent robber{u8"恶人", 30, 10, 1, 7, 160, 20, 22};

@@ -7,8 +7,19 @@
 namespace golden {
 enum class Attribute { Strength, Agility, Insight, Constitution, Count };
 enum class Item { Bun, Water, Medicine, WoodSword, IronSword, Coat, Stone,
-                  FishingRod, Fish, Iron, ForgedSword, Count };
-enum class Skill { Fist, Sword, Dodge, Force, Sect, Count };
+                  FishingRod, Fish, Iron, ForgedSword, SteelSaber, SteelStaff, LongWhip, Count };
+enum class Skill {
+    Fist, Sword, Dodge, Force, Legacy, Saber, Spell, Staff, Whip, Parry, Literacy,
+    Beauty, BaguaSaber, BaguaPalm, BaguaArray, BaguaForce, DragonSteps,
+    ButterflySteps, BlossomWhip, WillowSaber, PlumHands, ThreeFlowers,
+    CraneSteps, LotusTeaching, LotusStaff, FoundingFist, LotusForce,
+    NinjaArt, FormlessFist, ShadowSteps, MapleSaber,
+    TaijiSword, TaijiFist, TaijiForce, UnitedStreams, MysticSaber,
+    SnowSteps, SnowForce, ThirteenForms, SnowSword, SnowGrasp,
+    FiveAnimals, CrocSaber, MonkeyFist, TigerFist, EagleClaw, DragonElephant,
+    TalismanSteps, TalismanPalm, GrainForce, HeavenlyWay, CrowSpell, IceSpell, ThunderSpell,
+    SpiritMind, Count
+};
 enum class Sect { None, Taiji, Bagua, Snow, Flower, Lotus, Iga, Beast, Maoshan, Count };
 
 constexpr int skill_limit = 255;
@@ -30,8 +41,14 @@ struct ItemDef {
 
 struct SectDef {
     const char* name;
-    const char* art;
     const char* master;
+    Skill signature;
+};
+
+struct SkillDef {
+    const char* name;
+    Sect sect;
+    Skill foundation;
 };
 
 struct Hero {
@@ -56,10 +73,14 @@ struct Hero {
     int max_energy() const;
     int attack() const;
     int defense() const;
+    Skill attack_foundation() const;
+    Skill best_style(Skill foundation) const;
+    Skill special_style() const;
     int age() const;
     int amount(Item item) const;
     bool add(Item item, int count);
     bool use(Item item);
+    bool can_study(Skill skill) const;
     bool train(Skill skill);
     void advance();
     void restore();
@@ -71,6 +92,7 @@ const char* hero_name(int name);
 const char* appearance_name(int appearance);
 const char* attribute_name(Attribute attribute);
 const char* skill_name(Skill skill);
+const SkillDef& skill_def(Skill skill);
 const ItemDef& item_def(Item item);
 const SectDef& sect_def(Sect sect);
 bool accepts(Sect sect, const Hero& hero);

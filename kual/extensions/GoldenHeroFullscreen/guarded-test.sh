@@ -79,7 +79,7 @@ if [ "$MODE" = game ]; then
   export GOLDEN_HERO_PRIVATE_DIR="$PRIVATE_ROOT"
   if [ ! -s "$PRIVATE_ROOT/roms/obj_lu.bin" ] || [ ! -s "$PRIVATE_ROOT/roms/nc1020.fls" ]; then
     echo 'ERROR: Private NC1020 images missing. No fullscreen session started.'
-    rm -f "$LOCK_DIR/pid" "$LOCK_DIR/heartbeat" "$LOCK_DIR/child" >/dev/null 2>&1 || true
+    rm -f "$LOCK_DIR/pid" >/dev/null 2>&1 || true
     rmdir "$LOCK_DIR" >/dev/null 2>&1 || true
     exit 3
   fi
@@ -110,7 +110,7 @@ restore_ui() {
     wait "$WATCHDOG_PID" >/dev/null 2>&1 || true
   fi
   if [ -d "$LOCK_DIR" ]; then
-    rm -f "$LOCK_DIR/pid" >/dev/null 2>&1 || true
+    rm -f "$LOCK_DIR/pid" "$LOCK_DIR/heartbeat" "$LOCK_DIR/child" >/dev/null 2>&1 || true
     rmdir "$LOCK_DIR" >/dev/null 2>&1 || true
   fi
   echo 'UI restoration attempted.'

@@ -11,20 +11,22 @@ template <typename E> constexpr std::size_t index(E item) {
 constexpr ItemDef items[] = {
     {u8"包子", 4, 0, 0}, {u8"清水", 2, 0, 0}, {u8"金创药", 12, 0, 0},
     {u8"木剑", 15, 5, 0}, {u8"长剑", 55, 13, 0}, {u8"布衣", 18, 0, 5},
-    {u8"石料", 0, 0, 0}, {u8"钓竿", 24, 0, 0}, {u8"鲤鱼", 5, 0, 0},
+    {u8"石料", 0, 0, 0}, {u8"钓杆", 24, 0, 0}, {u8"鲤鱼", 5, 0, 0},
     {u8"铁矿", 0, 0, 0}, {u8"自铸剑", 0, 28, 0},
+    {u8"钢刀", 56, 14, 0}, {u8"钢杖", 58, 14, 0}, {u8"长鞭", 50, 12, 0},
 };
 constexpr SectDef sects[] = {
-    {u8"无门无派", u8"门派武学", ""}, {u8"太极门", u8"太极拳", u8"清虚道长"},
-    {u8"八卦门", u8"八卦掌", u8"商剑鸣"}, {u8"雪山派", u8"雪山剑法", u8"白瑞德"},
-    {u8"花间派", u8"一剪梅花手", u8"李青照"}, {u8"红莲教", u8"红莲掌", u8"张无忌"},
-    {u8"伊贺谷", u8"忍术", u8"伊贺上忍"}, {u8"兽王派", u8"猛虎拳", u8"娜可露"},
-    {u8"茅山派", u8"天师正道", u8"茅山道长"},
+    {u8"无门无派", "", Skill::Legacy}, {u8"太极门", u8"清虚道长", Skill::TaijiFist},
+    {u8"八卦门", u8"商剑鸣", Skill::BaguaArray}, {u8"雪山派", u8"白瑞德", Skill::SnowSword},
+    {u8"花间派", u8"李青照", Skill::PlumHands}, {u8"红莲教", u8"红莲教教主", Skill::FoundingFist},
+    {u8"伊贺谷", u8"伊贺上忍", Skill::FormlessFist}, {u8"兽王派", u8"娜可露", Skill::TigerFist},
+    {u8"茅山派", u8"茅山道长", Skill::HeavenlyWay},
 };
 constexpr const char* names[] = {u8"无名", u8"云舟", u8"青岚", u8"飞雪", u8"长风", u8"明月"};
 constexpr const char* appearances[] = {u8"少侠", u8"少女", u8"少年"};
 constexpr const char* attributes[] = {u8"膂力", u8"敏捷", u8"悟性", u8"根骨"};
-constexpr const char* skills[] = {u8"基本拳脚", u8"基本剑法", u8"基本轻功", u8"基本内功", u8"门派武学"};
+static_assert(sizeof(items) / sizeof(items[0]) == item_count, "One definition per item");
+static_assert(sizeof(sects) / sizeof(sects[0]) == index(Sect::Count), "One definition per sect");
 
 int roll(uint32_t& state, int maximum) {
     state = state * 1664525u + 1013904223u;
@@ -35,28 +37,57 @@ int roll(uint32_t& state, int maximum) {
 const char* hero_name(int name) { return names[name]; }
 const char* appearance_name(int appearance) { return appearances[appearance]; }
 const char* attribute_name(Attribute attribute) { return attributes[index(attribute)]; }
-const char* skill_name(Skill skill) { return skills[index(skill)]; }
 const ItemDef& item_def(Item item) { return items[index(item)]; }
 const SectDef& sect_def(Sect sect) { return sects[index(sect)]; }
 
 int Hero::max_health() const {
-    return 60 + 2 * attributes[index(Attribute::Constitution)] + 3 * skills[index(Skill::Force)];
+    return 60 + 2 * attributes[index(Attribute::Constitution)] + 3 * skills[index(Skill::Force)]
+        + skills[index(best_style(Skill::Force))];
 }
 
 int Hero::max_energy() const {
-    return 4 * skills[index(Skill::Force)];
+    return 4 * skills[index(Skill::Force)] + 2 * skills[index(best_style(Skill::Force))];
+}
+
+Skill Hero::attack_foundation() const {
+    switch (weapon) {
+    case Item::SteelSaber: return Skill::Saber;
+    case Item::SteelStaff: return Skill::Staff;
+    case Item::LongWhip: return Skill::Whip;
+    case Item::Count: return Skill::Fist;
+    default: return Skill::Sword;
+    }
+}
+
+Skill Hero::best_style(Skill foundation) const {
+    Skill best = Skill::Legacy;
+    for (std::size_t i = index(Skill::Beauty); i < skill_count; ++i) {
+        const auto skill = static_cast<Skill>(i);
+        const auto& def = skill_def(skill);
+        if (def.foundation == foundation && def.sect == sect && skills[i] > skills[index(best)])
+            best = skill;
+    }
+    return best;
+}
+
+Skill Hero::special_style() const {
+    const Skill armed = best_style(attack_foundation());
+    const Skill spell = best_style(Skill::Spell);
+    return skills[index(spell)] > skills[index(armed)] ? spell : armed;
 }
 
 int Hero::attack() const {
-    const bool armed = weapon != Item::Count;
-    const int base_skill = skills[index(armed ? Skill::Sword : Skill::Fist)];
-    return 5 + attributes[index(Attribute::Strength)] / 2 + base_skill * 2
-        + skills[index(Skill::Sect)] + (armed ? item_def(weapon).attack : 0);
+    const Skill base = attack_foundation();
+    return 5 + attributes[index(Attribute::Strength)] / 2 + 2 * skills[index(base)]
+        + skills[index(best_style(base))] + (weapon != Item::Count ? item_def(weapon).attack : 0);
 }
 
 int Hero::defense() const {
     return attributes[index(Attribute::Constitution)] / 4 + skills[index(Skill::Dodge)]
-        + skills[index(Skill::Force)] + (armor != Item::Count ? item_def(armor).defense : 0);
+        + skills[index(Skill::Force)] + skills[index(Skill::Parry)] / 2
+        + skills[index(best_style(Skill::Dodge))] / 2 + skills[index(best_style(Skill::Force))] / 2
+        + skills[index(best_style(Skill::Parry))] / 2
+        + (armor != Item::Count ? item_def(armor).defense : 0);
 }
 
 int Hero::age() const { return 14 + static_cast<int>(steps / 2500); }
@@ -99,11 +130,19 @@ bool Hero::use(Item item) {
     return add(item, -1);
 }
 
+bool Hero::can_study(Skill skill) const {
+    if (index(skill) >= skill_count || skill == Skill::Legacy) return false;
+    const auto& def = skill_def(skill);
+    return def.sect == Sect::None || def.sect == sect;
+}
+
 bool Hero::train(Skill skill) {
+    if (!can_study(skill)) return false;
     auto& level = skills[index(skill)];
+    const auto& def = skill_def(skill);
     const int cost = 4 + level / 3;
     if (level == skill_limit || potential < cost || food == 0 || drink == 0 ||
-        (skill == Skill::Sect && (sect == Sect::None || level >= skills[index(Skill::Fist)])))
+        (def.foundation != skill && level >= skills[index(def.foundation)]))
         return false;
     potential -= cost;
     ++level;
@@ -128,6 +167,9 @@ void Hero::reward(int exp, int points, int money) {
 
 bool Hero::valid() const {
     if (appearance >= 3 || name >= 6 || index(sect) >= index(Sect::Count)) return false;
+    if (skills[index(Skill::Legacy)]) return false;
+    for (std::size_t i = index(Skill::Beauty); i < skill_count; ++i)
+        if (skills[i] && !can_study(static_cast<Skill>(i))) return false;
     if (std::accumulate(attributes.begin(), attributes.end(), 0) > 80) return false;
     for (int value : attributes) if (value < 10 || value > 30) return false;
     for (int count : bag) if (count > inventory_limit) return false;
@@ -177,7 +219,7 @@ Exchange exchange(Hero& hero, const Opponent& opponent, int& enemy_health,
             int(hero.attributes[index(Attribute::Agility)]) / 2 - opponent.agility));
         if (roll(state, 100) < aim || action == BattleAction::Special) {
             const int power = hero.attack() + (action == BattleAction::Special
-                ? 7 + hero.skills[index(Skill::Sect)] * 2 : 0);
+                ? 7 + hero.skills[index(hero.special_style())] * 2 : 0);
             dealt = std::min(enemy_health, std::max(1, power + roll(state, 5) - opponent.defense));
             enemy_health -= dealt;
         }

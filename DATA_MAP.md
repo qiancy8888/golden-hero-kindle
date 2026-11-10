@@ -4,9 +4,9 @@
 | --- | --- | --- |
 | 地点与居民 | `game/world.cpp` | 场景编号、地形、NPC、相邻出口和八坛解锁 |
 | 原版场景索引 | `scripts/analyze-nc1020-atlas.py` | 从个人 Flash 读取场景指针和对象类型，仅在电脑上用于核对 |
-| 角色与道具 | `game/rpg.*` | 四项先天属性、年龄、气血内力、食饮、钱、经验、装备和门派 |
+| 角色、道具与武学 | `game/rpg.*`、`game/skills.cpp` | 先天属性、年龄、气血内力、食饮、钱、经验、装备、门派和 54 项武学 |
 | 进度 | `game/town.*` | 位置与朝向、石料和除恶差事、八坛进度、家园标记与随机种子 |
-| 存档编码 | `game/save.*` | `GHKP` 标记、版本 1、递增代号、固定小端字段与 CRC32 |
+| 存档编码 | `game/save.*` | `GHKP` 标记、版本 2、递增代号、固定小端字段与 CRC32。可读取和迁移版本 1 |
 | 存档文件 | `golden_hero_standalone/saves/journey.0` 和 `journey.1` | 由 `kindle/save_file.cpp` 交替写入，读档时选代号最新的有效槽 |
 | 图块与字体 | `game/view.cpp`、`game/opening_glyphs.inc` | 自制图块与 GNU Unifont 字形子集 |
 | 设备日志 | `golden_hero_standalone/logs/standalone.log` | KUAL 启停、刷新和恢复结果 |

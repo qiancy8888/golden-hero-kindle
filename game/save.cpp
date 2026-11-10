@@ -6,8 +6,12 @@
 namespace golden {
 namespace {
 constexpr uint8_t magic[] = {'G', 'H', 'K', 'P'};
-constexpr uint32_t format = 1;
-constexpr std::size_t size_v1 = 4 * (28 + attribute_count + skill_count + item_count);
+constexpr uint32_t format = 2;
+constexpr uint32_t old_format = 1;
+constexpr int old_skills = 5;
+constexpr int old_items = 11;
+constexpr std::size_t size_v1 = 4 * (28 + attribute_count + old_skills + old_items);
+constexpr std::size_t size_v2 = 4 * (28 + attribute_count + skill_count + item_count);
 
 void append(SaveBytes& bytes, uint32_t word) {
     for (unsigned shift = 0; shift < 32; shift += 8)
@@ -69,8 +73,10 @@ SaveStatus decode_save(const SaveBytes& bytes, Journey& journey, uint32_t& gener
     if (bytes.size() < 16 || bytes.size() > save_limit ||
         !std::equal(magic, magic + sizeof(magic), bytes.begin())) return SaveStatus::Damaged;
     Reader read{bytes, sizeof(magic)};
-    if (read.word() != format) return SaveStatus::Unsupported;
-    if (bytes.size() != size_v1) return SaveStatus::Damaged;
+    const uint32_t version = read.word();
+    if (version != format && version != old_format) return SaveStatus::Unsupported;
+    const bool legacy = version == old_format;
+    if (bytes.size() != (legacy ? size_v1 : size_v2)) return SaveStatus::Damaged;
     Reader trailer{bytes, bytes.size() - 4};
     if (trailer.word() != crc(bytes.data(), bytes.size() - 4)) return SaveStatus::Damaged;
     const uint32_t revision = read.word();
@@ -98,23 +104,32 @@ SaveStatus decode_save(const SaveBytes& bytes, Journey& journey, uint32_t& gener
     hero.appearance = static_cast<uint8_t>(appearance);
     hero.name = static_cast<uint8_t>(name);
     hero.sect = static_cast<Sect>(read.number());
+    if (hero.sect < Sect::None || hero.sect >= Sect::Count) return SaveStatus::Damaged;
     for (auto& value : hero.attributes) {
         const auto field = read.word();
         if (field > 30) return SaveStatus::Damaged;
         value = static_cast<uint8_t>(field);
     }
-    for (auto& value : hero.skills) {
+    const auto stored_skills = legacy ? static_cast<std::size_t>(old_skills) : skill_count;
+    for (std::size_t i = 0; i < stored_skills; ++i) {
         const auto field = read.word();
         if (field > skill_limit) return SaveStatus::Damaged;
-        value = static_cast<uint8_t>(field);
+        if (legacy && i == static_cast<std::size_t>(Skill::Legacy)) {
+            if (hero.sect != Sect::None)
+                hero.skills[static_cast<std::size_t>(sect_def(hero.sect).signature)] = static_cast<uint8_t>(field);
+        } else {
+            hero.skills[i] = static_cast<uint8_t>(field);
+        }
     }
-    for (auto& value : hero.bag) {
+    const auto stored_items = legacy ? static_cast<std::size_t>(old_items) : item_count;
+    for (std::size_t i = 0; i < stored_items; ++i) {
         const auto field = read.word();
         if (field > inventory_limit) return SaveStatus::Damaged;
-        value = static_cast<uint16_t>(field);
+        hero.bag[i] = static_cast<uint16_t>(field);
     }
-    hero.weapon = static_cast<Item>(read.number());
-    hero.armor = static_cast<Item>(read.number());
+    const int weapon = read.number(), armor = read.number();
+    hero.weapon = legacy && weapon == old_items ? Item::Count : static_cast<Item>(weapon);
+    hero.armor = legacy && armor == old_items ? Item::Count : static_cast<Item>(armor);
     hero.health = read.number();
     hero.energy = read.number();
     hero.food = read.number();

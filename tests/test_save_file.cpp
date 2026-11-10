@@ -39,7 +39,7 @@ int main() {
     CHECK(reopened.write(hero));
     auto future = encode_save(hero, 3);
     CHECK(!future.empty());
-    future[4] = 2;
+    future[4] = 3;
     replace(first, future);
     CHECK(reopened.load(loaded) == SaveStatus::Loaded && loaded.hero.coins == 99);
     CHECK(!reopened.write(hero));

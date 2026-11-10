@@ -121,6 +121,7 @@ int main(int argc, char** argv) {
         if (now >= next_heartbeat) {
             if (getppid() != launcher || !heartbeat(heartbeat_path, now)) {
                 std::fputs("Lost the fullscreen launcher heartbeat.\n", stderr);
+                display_ok = false;
                 break;
             }
             next_heartbeat = now + heartbeat_interval_ms;
