@@ -124,24 +124,24 @@ struct District {
 };
 
 const District districts[] = {
-    {u8"平安镇西", &west, {{{{14,4},u8"石料管事",R::StoneKeeper},{{5,6},u8"钓叟",R::Fisher}}}},
-    {u8"平安镇中", &center, {{{{9,4},u8"村长",R::Elder},{{7,6},u8"书童",R::Guide}}}},
+    {u8"平安镇西", &west, {{{{14,4},u8"石料管事",R::StoneKeeper},{{5,6},u8"荷西",R::Fisher}}}},
+    {u8"平安镇中", &center, {{{{9,4},u8"村长",R::Elder},{{7,6},u8"小书童",R::Guide}}}},
     {u8"平安镇东", &east, {{{{4,6},u8"工地管事",R::Foreman},{{14,6},u8"恶人",R::Bandit}}}},
-    {u8"商业街", &street, {{{{7,4},u8"杂货贩",R::Vendor},{{12,6},u8"兵器商",R::Vendor}}}},
+    {u8"商业街", &street, {{{{7,4},u8"杂货贩",R::Vendor},{{12,6},u8"何铁手",R::Armorer}}}},
     {u8"家中", &room, {{{{8,4},u8"家中床榻",R::Keeper}}}},
-    {u8"客栈", &room, {{{{8,4},u8"店小二",R::Vendor},{{13,4},u8"独行大侠",R::Trainer}}}},
+    {u8"客栈", &room, {{{{8,4},u8"店小二",R::Innkeeper},{{13,4},u8"独行大侠",R::Veteran}}}},
     {u8"衙门", &room, {{{{9,4},u8"捕快",R::Guard}}}},
     {u8"药铺", &room, {{{{9,4},u8"平一指",R::Healer}}}},
-    {u8"武馆", &room, {{{{9,4},u8"武馆师傅",R::Trainer}}}},
+    {u8"武馆", &room, {{{{9,4},u8"武师教头",R::Trainer}}}},
     {u8"商家堡", &street, {{{{9,4},u8"商剑鸣",R::Master}}}, Sect::Bagua},
     {u8"玉女峰", &hills, {{{{9,4},u8"李青照",R::Master}}}, Sect::Flower},
-    {u8"五指山", &hills, {{{{9,4},u8"红莲教教主",R::Master}}}, Sect::Lotus},
-    {u8"冰火岛", &shore, {{{{9,4},u8"伊贺上忍",R::Master}}}, Sect::Iga},
+    {u8"五指山", &hills, {{{{9,4},u8"王璁儿",R::Master}}}, Sect::Lotus},
+    {u8"冰火岛", &shore, {{{{9,4},u8"枳右京",R::Master}}}, Sect::Iga},
     {u8"武当山", &hills, {{{{9,4},u8"清虚道长",R::Master}}}, Sect::Taiji},
     {u8"大雪山", &hills, {{{{9,4},u8"白瑞德",R::Master}}}, Sect::Snow},
     {u8"黑森林", &west, {{{{9,4},u8"娜可露",R::Master}}}, Sect::Beast},
-    {u8"灵心观", &street, {{{{9,4},u8"茅山道长",R::Master}}}, Sect::Maoshan},
-    {u8"铸剑谷", &hills, {{{{9,4},u8"铸剑师",R::Smith}}}},
+    {u8"灵心观", &street, {{{{9,4},u8"留孙真人",R::Master}}}, Sect::Maoshan},
+    {u8"铸剑谷", &hills, {{{{9,4},u8"干匠",R::Smith}}}},
     {u8"阎罗府", &lair, {{{{9,4},u8"阎罗王",R::Judge}}}},
     {u8"桃花源", &shore, {{{{9,4},u8"老管家",R::Keeper}}}},
     {u8"青龙坛", &lair, {{{{9,4},u8"青龙坛主",R::AltarLord}}}},
@@ -152,6 +152,14 @@ const District districts[] = {
     {u8"紫煞坛", &lair, {{{{9,4},u8"紫煞坛主",R::AltarLord}}}},
     {u8"天徽坛", &lair, {{{{9,4},u8"天徽坛主",R::AltarLord}}}},
     {u8"暗黑坛", &lair, {{{{9,4},u8"总瓢把子",R::AltarLord}}}},
+    {u8"镇西岔路", &hills, {}},
+    {u8"镇东岔路", &hills, {}},
+    {u8"五指渡口", &shore, {}},
+    {u8"冰火渡口", &shore, {}},
+    {u8"北山岔路", &hills, {}},
+    {u8"商家驿道", &hills, {}},
+    {u8"玉女山道", &hills, {}},
+    {u8"雪山山道", &hills, {}},
 };
 static_assert(sizeof(districts) / sizeof(districts[0]) == static_cast<std::size_t>(A::Count),
               "One district is required for every area");
@@ -159,12 +167,16 @@ static_assert(sizeof(districts) / sizeof(districts[0]) == static_cast<std::size_
 constexpr Passage links[] = {
     {A::Center,D::Left,A::West,D::Right}, {A::Center,D::Right,A::East,D::Left},
     {A::Center,D::Up,A::Market,D::Down}, {A::Center,D::Down,A::Home,D::Up},
-    {A::West,D::Left,A::Snow,D::Right}, {A::West,D::Up,A::Jade,D::Down},
-    {A::West,D::Down,A::Forest,D::Up}, {A::East,D::Right,A::Shang,D::Left},
-    {A::East,D::Up,A::Wudang,D::Down}, {A::East,D::Down,A::Ice,D::Up},
+    {A::West,D::Left,A::WestCross,D::Right}, {A::East,D::Right,A::EastCross,D::Left},
+    {A::WestCross,D::Up,A::NorthCross,D::Down}, {A::WestCross,D::Down,A::LotusCross,D::Up},
+    {A::WestCross,D::Left,A::Forest,D::Right}, {A::EastCross,D::Up,A::Spirit,D::Down},
+    {A::EastCross,D::Down,A::IceDock,D::Up}, {A::EastCross,D::Right,A::ShangTrail,D::Left},
+    {A::LotusCross,D::Left,A::FiveFinger,D::Right}, {A::LotusCross,D::Right,A::Wudang,D::Left},
+    {A::IceDock,D::Down,A::Ice,D::Up}, {A::ShangTrail,D::Right,A::Shang,D::Left},
+    {A::NorthCross,D::Left,A::SnowTrail,D::Right}, {A::NorthCross,D::Up,A::JadeTrail,D::Down},
+    {A::SnowTrail,D::Left,A::Snow,D::Right}, {A::JadeTrail,D::Up,A::Jade,D::Down},
     {A::Market,D::Up,A::Court,D::Down}, {A::Market,D::Left,A::Inn,D::Right},
     {A::Market,D::Right,A::Clinic,D::Left}, {A::Home,D::Down,A::Dojo,D::Up},
-    {A::Snow,D::Left,A::FiveFinger,D::Right}, {A::Snow,D::Up,A::Spirit,D::Down},
     {A::Shang,D::Right,A::Forge,D::Left}, {A::Jade,D::Left,A::Peach,D::Right},
     {A::Shang,D::Up,A::Green,D::Down}, {A::Spirit,D::Up,A::Earth,D::Down},
     {A::FiveFinger,D::Up,A::Scarlet,D::Down}, {A::Forest,D::Left,A::Mountain,D::Right},
@@ -222,6 +234,32 @@ const Passage* passage(Area area, Direction direction) {
         if ((link.from == area && link.leave == direction) || (link.to == area && link.arrive == direction))
             return &link;
     return nullptr;
+}
+
+bool route_step(Area from, Area to, int progress, Direction& direction) {
+    if (from == to) return false;
+    constexpr auto count = static_cast<std::size_t>(Area::Count);
+    std::array<bool, count> visited{};
+    std::array<Area, count> queued{};
+    std::array<Direction, count> first{};
+    std::size_t head = 0, tail = 0;
+    visited[static_cast<std::size_t>(from)] = true;
+    queued[tail++] = from;
+    while (head < tail) {
+        const Area current = queued[head++];
+        for (auto leave : {D::Up, D::Down, D::Left, D::Right}) {
+            const auto* link = passage(current, leave);
+            if (!link) continue;
+            const Area next = link->from == current ? link->to : link->from;
+            const auto key = static_cast<std::size_t>(next);
+            if (visited[key] || !may_enter(next, progress)) continue;
+            visited[key] = true;
+            first[key] = current == from ? leave : first[static_cast<std::size_t>(current)];
+            if (next == to) { direction = first[key]; return true; }
+            queued[tail++] = next;
+        }
+    }
+    return false;
 }
 
 Tile terrain(Area area, Point p) {

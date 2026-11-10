@@ -2,12 +2,13 @@
 
 ## Standalone v0.2.0 (2026-11-10)
 
-- Add a playable campaign from character creation through the eight altar battles, with 28 scenes, sects, equipment, shops and side activities.
+- Add a playable campaign from character creation through the eight altar battles, with 36 scenes, sects, equipment, shops and side activities.
 - Persist progress using two checksummed save slots. Verify fallback on a damaged slot and protect newer-format saves.
 - Replace the standalone session timer with a heartbeat watchdog and retain the single-instance framebuffer lock.
 - Add a host playthrough through the final encounter and a save-file recovery test.
 - Document the verified starting stats and add a read-only analyzer for the original Flash scene index.
 - Restore the original 54 skill names and the eight altar regions. Keep version 1 progress readable as the save schema grows.
+- Match the external road graph to the original scene index and restore verified resident names and shop roles.
 
 ## Standalone v0.1.0 (2026-11-09)
 

@@ -193,10 +193,30 @@ void read_legacy_save() {
     CHECK(journey.hero.skills[index(Skill::Legacy)] == 0);
     CHECK(encode_save(journey, 18).at(4) == 2);
 }
+
+void verify_exits() {
+    for (int i = 0; i < index(Area::Count); ++i) {
+        const auto area = static_cast<Area>(i);
+        for (auto direction : directions) {
+            const auto* link = passage(area, direction);
+            if (!link) continue;
+            const bool forward = link->from == area;
+            const auto destination = forward ? link->to : link->from;
+            const auto side = forward ? link->arrive : link->leave;
+            CHECK(passage(destination, side) == link);
+            CHECK(walkable(area, gate(direction)) && walkable(destination, gate(side)));
+        }
+        if (area != Area::Underworld && area != Area::Center) {
+            Direction step;
+            CHECK(route_step(Area::Center, area, completed_altars, step));
+        }
+    }
+}
 }
 
 int main() {
     read_legacy_save();
+    verify_exits();
     Town town;
     CHECK(town.page() == Page::Title);
     choose(town, u8"新建人物");
@@ -264,7 +284,7 @@ int main() {
     CHECK(town.hero().amount(Item::Stone) == 0);
 
     go(town, Area::Market);
-    talk(town, Role::Vendor);
+    talk(town, Role::Armorer);
     choose(town, u8"买卖物品");
     choose(town, u8"长剑");
     choose(town, u8"布衣");
@@ -287,6 +307,9 @@ int main() {
     choose(town, u8"领取青龙坛地图");
     CHECK(town.journey().altar == 1);
     CHECK(!may_enter(Area::Earth, town.journey().altar));
+    Direction toward;
+    CHECK(route_step(Area::Center, Area::Green, 1, toward) && toward == Direction::Right);
+    CHECK(!route_step(Area::Center, Area::Earth, 1, toward));
     for (int altar = 1; altar <= altar_count; ++altar) {
         rest(town);
         go(town, altar_area(altar));
@@ -303,5 +326,41 @@ int main() {
     CHECK(town.menu());
     choose(town, u8"查看结局");
     CHECK(town.page() == Page::Ending);
+
+    choose(town, u8"继续游历");
+    go(town, Area::Market);
+    talk(town, Role::Vendor);
+    choose(town, u8"买卖物品");
+    choose(town, u8"钓杆");
+    CHECK(town.back() && town.back());
+    go(town, Area::West);
+    talk(town, Role::Fisher);
+    choose(town, u8"持钓杆垂钓");
+    CHECK(town.hero().amount(Item::Fish) == 1);
+    CHECK(town.back());
+    go(town, Area::Forge);
+    talk(town, Role::Smith);
+    for (int i = 0; i < 3; ++i) choose(town, u8"采集铁矿");
+    choose(town, u8"铸剑");
+    CHECK(town.hero().amount(Item::Iron) == 0 && town.hero().amount(Item::ForgedSword) == 1);
+    CHECK(town.back());
+    go(town, Area::Peach);
+    talk(town, Role::Keeper);
+    choose(town, u8"置办家园");
+    CHECK(town.journey().has_house);
+
+    Journey wounded = town.journey();
+    wounded.area = Area::East;
+    wounded.position = {14, 5};
+    wounded.hero.health = 1;
+    CHECK(town.resume(wounded));
+    choose(town, u8"继续江湖");
+    talk(town, Role::Bandit);
+    choose(town, u8"出手缉拿");
+    choose(town, u8"防守调息");
+    CHECK(town.area() == Area::Underworld);
+    talk(town, Role::Judge);
+    choose(town, u8"返回阳间");
+    CHECK(town.area() == Area::Home && town.hero().health == town.hero().max_health());
     std::puts("Standalone campaign checks passed.");
 }

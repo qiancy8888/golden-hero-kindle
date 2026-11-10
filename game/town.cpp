@@ -16,6 +16,17 @@ template <typename E> int id(E value) { return static_cast<int>(value); }
 std::string numbered(const char* name, int value) {
     return std::string(name) + "  " + std::to_string(value);
 }
+
+bool stocks(Role vendor, Item item) {
+    const auto& def = item_def(item);
+    if (!def.price) return false;
+    switch (vendor) {
+    case Role::Armorer: return def.attack || def.defense;
+    case Role::Healer: return item == Item::Medicine;
+    case Role::Innkeeper: return item == Item::Bun || item == Item::Water;
+    default: return item == Item::Bun || item == Item::Water || item == Item::FishingRod;
+    }
+}
 }
 
 bool Journey::valid() const {
@@ -91,6 +102,15 @@ std::string Town::gate_hint() const {
         return std::string(may_enter(next, state_.altar) ? u8"此处通往 " : u8"地图未得：")
             + location_name(next);
     }
+    Area objective = Area::Center;
+    if (state_.hunt == Hunt::Report) objective = Area::Court;
+    else if (state_.hunt == Hunt::Tracking || state_.job == Job::Carrying) objective = Area::East;
+    else if (state_.altar > 0 && state_.altar <= altar_count) objective = altar_area(state_.altar);
+    Direction direction;
+    if (route_step(area(), objective, state_.altar, direction)) {
+        constexpr const char* sides[] = {u8"北", u8"南", u8"西", u8"东"};
+        return std::string(u8"任务方向：") + sides[id(direction)] + u8"出口";
+    }
     return {};
 }
 
@@ -158,10 +178,10 @@ void Town::refresh() {
     case Page::Shop:
         for (int i = 0; i < id(Item::Count); ++i) {
             const Item item = static_cast<Item>(i);
-            if (item_def(item).price && item != Item::Fish)
+            if (stocks(target_->role, item))
                 add(numbered(item_def(item).name, item_def(item).price) + u8" 文", Op::Buy, i);
         }
-        if (hero().amount(Item::Fish)) add(u8"卖一尾鲤鱼", Op::SellFish);
+        if (target_->role == Role::Vendor && hero().amount(Item::Fish)) add(u8"卖一尾鲤鱼", Op::SellFish);
         break;
     case Page::Battle: {
         const Skill style = hero().special_style();
@@ -199,7 +219,8 @@ void Town::interact() {
         if (state_.job == Job::Carrying) add(u8"交石料", Op::DeliverStone);
         else notice_ = u8"有石料才可结算，先去镇西。";
         break;
-    case Role::Vendor: add(u8"买卖物品", Op::Shop); break;
+    case Role::Vendor: case Role::Armorer: add(u8"买卖物品", Op::Shop); break;
+    case Role::Innkeeper: add(u8"买饭和水", Op::Shop); add(u8"住店（六文）", Op::Rest, 6); break;
     case Role::Guard:
         if (state_.hunt == Hunt::None) add(u8"领取除恶差事", Op::Bounty);
         if (state_.hunt == Hunt::Report) add(u8"领取差事赏金", Op::ReportBounty);
@@ -207,6 +228,10 @@ void Town::interact() {
         break;
     case Role::Healer: add(u8"疗伤（八文）", Op::Rest, 8); add(u8"买药", Op::Shop); break;
     case Role::Trainer: add(u8"请教基本功", Op::Skills); break;
+    case Role::Veteran:
+        if (hero().experience >= 200000) add(u8"请教基本功", Op::Skills);
+        else notice_ = u8"经验还浅，先找武师教头。";
+        break;
     case Role::Master:
         if (hero().sect == Sect::None) add(u8"拜师入门", Op::Join);
         else if (hero().sect == local_sect(area())) add(u8"向师父请教", Op::Skills);
@@ -221,7 +246,7 @@ void Town::interact() {
         add(u8"采集铁矿", Op::Mine);
         add(u8"铸剑（三铁矿、百文）", Op::Forge);
         break;
-    case Role::Fisher: add(u8"持钓竿垂钓", Op::Fish); break;
+    case Role::Fisher: add(u8"持钓杆垂钓", Op::Fish); break;
     case Role::Keeper:
         if (area() == Area::Peach && !state_.has_house) add(u8"置办家园（二百文）", Op::BuyHouse);
         else add(u8"歇息调养", Op::Rest);
@@ -365,7 +390,7 @@ void Town::execute(const Entry& entry) {
             state_.met_guide = true;
             hero.reward(80, 20, 12);
             hero.add(Item::WoodSword, 1);
-            record(u8"书童送你一把木剑。");
+            record(u8"小书童送你一把木剑。");
         } else notice_ = u8"衙门招人除恶，武馆可请教。";
         break;
     case Op::LearnMap:

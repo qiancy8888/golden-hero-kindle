@@ -7,7 +7,7 @@
 1. 将 `Kindle-Golden-Hero-KPW1-Standalone-v0.2.0.zip` 解压到 Kindle USB 根目录。安装目录为 `extensions/GoldenHeroStandalone/` 和 `golden_hero_standalone/`。
 2. 安全弹出 Kindle，在 KUAL 打开「黄金英雄坛说 · Kindle 独立版」→「开始游戏」。选「新建人物」，用上下选字段、左右调整。以后可选「继续江湖」。
 3. 在镇中先找书童，打开「菜单 → 背包与装备」使用木剑。到镇北商业街，再从北口到衙门接差事。到镇东打恶人，回衙门结算潜能和钱。
-4. 从「菜单 → 武学修为」提升基本剑法、内功等，到家中歇息。经验达到当前版本的门槛后找村长领青龙坛地图。走近地图边缘的方形路口可看到下一处地点。
+4. 从「菜单 → 武学修为」提升基本剑术、内功等，到家中歇息。经验达到当前版本的门槛后找村长领青龙坛地图。地图底部会提示任务方向，走近方形路口会显示下一处地点。
 5. 需要离开时点「菜单 → 保存进度」，再点「退出」。进度写到 `golden_hero_standalone/saves/`，调试日志在 `golden_hero_standalone/logs/standalone.log`。
 
 当前战斗与路线为独立版配置。还原范围见仓库的 `docs/ORIGINAL-COVERAGE.md`。

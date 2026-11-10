@@ -18,9 +18,9 @@ constexpr ItemDef items[] = {
 constexpr SectDef sects[] = {
     {u8"无门无派", "", Skill::Legacy}, {u8"太极门", u8"清虚道长", Skill::TaijiFist},
     {u8"八卦门", u8"商剑鸣", Skill::BaguaArray}, {u8"雪山派", u8"白瑞德", Skill::SnowSword},
-    {u8"花间派", u8"李青照", Skill::PlumHands}, {u8"红莲教", u8"红莲教教主", Skill::FoundingFist},
-    {u8"伊贺谷", u8"伊贺上忍", Skill::FormlessFist}, {u8"兽王派", u8"娜可露", Skill::TigerFist},
-    {u8"茅山派", u8"茅山道长", Skill::HeavenlyWay},
+    {u8"花间派", u8"李青照", Skill::PlumHands}, {u8"红莲教", u8"王璁儿", Skill::FoundingFist},
+    {u8"伊贺谷", u8"枳右京", Skill::FormlessFist}, {u8"兽王派", u8"娜可露", Skill::TigerFist},
+    {u8"茅山派", u8"留孙真人", Skill::HeavenlyWay},
 };
 constexpr const char* names[] = {u8"无名", u8"云舟", u8"青岚", u8"飞雪", u8"长风", u8"明月"};
 constexpr const char* appearances[] = {u8"少侠", u8"少女", u8"少年"};

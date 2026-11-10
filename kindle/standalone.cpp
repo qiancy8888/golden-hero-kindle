@@ -3,6 +3,7 @@
 #include "touch.h"
 #include "view.h"
 
+#include <algorithm>
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
@@ -15,6 +16,7 @@
 namespace {
 constexpr int scale = 2;
 constexpr uint64_t heartbeat_interval_ms = 2000;
+constexpr uint64_t idle_redraw_ms = 60000;
 constexpr uint64_t refresh_interval_ms = 220;
 constexpr uint64_t first_repeat_ms = 400;
 constexpr uint64_t repeat_ms = 280;
@@ -108,9 +110,11 @@ int main(int argc, char** argv) {
     bool display_ok = redraw(fb, left, previous, {0, 0, view_width, view_height});
     uint64_t next_refresh = now_ms() + refresh_interval_ms;
     uint64_t next_heartbeat = 0;
+    uint64_t last_input = now_ms();
     uint64_t next_repeat = 0;
     Action active = Action::None;
     bool pending = false;
+    bool refresh_all = false;
     bool exit_requested = false;
     std::fprintf(stderr, "Standalone game ready; EPDC=%s.\n",
                  display_ok ? "OK" : "FAILED");
@@ -130,6 +134,11 @@ int main(int argc, char** argv) {
         for (int events = 0; events < 16 && touch.poll_point(fb.w, fb.h, point); ++events) {
             const Action hit = action_at(point, left);
             if (point.pressed) {
+                if (point.valid && now - last_input >= idle_redraw_ms) {
+                    pending = true;
+                    refresh_all = true;
+                }
+                last_input = now;
                 active = hit;
                 if (direction_for(active, direction)) {
                     pending |= town.move(direction);
@@ -161,16 +170,23 @@ int main(int argc, char** argv) {
         }
         if (pending && now >= next_refresh) {
             render(town, frame);
-            const Rect dirty = changed_region(previous, frame);
+            const Rect dirty = refresh_all ? Rect{0, 0, view_width, view_height}
+                                           : changed_region(previous, frame);
             if (dirty.w > 0) {
                 display_ok = redraw(fb, left, frame, dirty);
                 previous = frame;
                 next_refresh = now + refresh_interval_ms;
             }
             pending = false;
+            refresh_all = false;
         }
         pollfd event{touch.fd, POLLIN, 0};
-        const int result = poll(&event, 1, 20);
+        uint64_t wake_at = next_heartbeat;
+        if (pending) wake_at = std::min(wake_at, next_refresh);
+        if (direction_for(active, direction)) wake_at = std::min(wake_at, next_repeat);
+        const uint64_t before_poll = now_ms();
+        const int wait_ms = wake_at > before_poll ? static_cast<int>(wake_at - before_poll) : 0;
+        const int result = poll(&event, 1, wait_ms);
         if ((result < 0 && !interrupted) || (result > 0 && (event.revents & (POLLERR | POLLHUP | POLLNVAL)))) {
             std::fputs("Touchscreen poll failed.\n", stderr);
             display_ok = false;
