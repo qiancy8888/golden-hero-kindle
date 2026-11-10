@@ -1,5 +1,15 @@
 # Golden Hero on Kindle Paperwhite 1 (KPW1)
 
+## Platinum Hero v1.0.0 · 白金英雄坛说
+
+Platinum Hero runs the [GMUD_GB](https://github.com/wangkira/GMUD_GB) Game Boy Color edition on a jailbroken first-generation Kindle Paperwhite with KUAL and firmware 5.6.1.1. It uses Gambatte, low-flash e-ink updates, touch controls, and persistent SRAM saves.
+
+1. Download the [PW1 KUAL installer](https://github.com/qiancy8888/golden-hero-kindle/releases/tag/platinum-v1.0.0) and extract it to the Kindle USB root.
+2. Build `hero.gbc` locally from the pinned game source and copy it to `platinum_hero/hero.gbc`. The public installer contains the runtime, its source, and licenses. See the [installation and ROM build guide](docs/PLATINUM.md).
+3. Open **KUAL → 白金英雄坛说 → 开始游戏**.
+
+## Golden Hero standalone preview
+
 **Standalone preview v0.1.0** includes a playable Ping’an Town opening with Chinese dialogue and the stone delivery job. It starts from its own KUAL menu and runs offline on KPW1 firmware 5.6.1.1. See the [standalone build and install guide](docs/STANDALONE.md).
 
 ## NC1020 emulator track

@@ -1,5 +1,13 @@
 # Kindle《黄金英雄坛说》KPW1 移植工程 v0.9.6
 
+## 白金英雄坛说 v1.0.0
+
+白金版通过 Gambatte 运行 [GMUD_GB](https://github.com/wangkira/GMUD_GB) 的 GBC 移植版，适用于已越狱并安装 KUAL 的初代 Kindle Paperwhite（固件 5.6.1.1）。支持触屏按键、低闪局刷、手动清残影和两槽存档。
+
+1. 下载 [PW1 KUAL 安装包](https://github.com/qiancy8888/golden-hero-kindle/releases/tag/platinum-v1.0.0)，解压到 Kindle USB 根目录。
+2. 按 [白金版安装与构建说明](docs/PLATINUM.md) 本地构建游戏 ROM，并复制到 `platinum_hero/hero.gbc`。
+3. 打开 **KUAL → 白金英雄坛说 → 开始游戏**。
+
 ## 独立版 v0.1.0
 
 独立版从 KUAL 直接进入平安镇，支持中文对话、三张小地图和搬石料任务。安装包包含游戏所需数据。首轮受保护试玩为 45 秒，进度仅保留在当次会话中。安装、操作和构建见 [独立版试玩说明](docs/STANDALONE.md)。

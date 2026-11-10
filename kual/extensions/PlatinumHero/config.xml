@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension>
+  <information>
+    <name>白金英雄坛说</name>
+    <version>1.0.0</version>
+    <author>Platinum Hero PW1 Port</author>
+    <id>platinum-hero-kpw1</id>
+  </information>
+  <menus><menu type="json">menu.json</menu></menus>
+</extension>

@@ -1,5 +1,34 @@
 # Changelog
 
+## Platinum v1.0.0 (2026-11-10)
+
+- Add the public KUAL installer and local ROM build instructions to both project READMEs.
+- Remove the Platinum play session time limit. Monitor game-loop heartbeats and recover the Kindle UI if the process stalls.
+- Postpone the screensaver during play when its previous setting can be read, then restore that setting on exit.
+- Add launcher regression tests for sustained play and stalled-process recovery.
+
+## Platinum v0.1.3 (2026-11-10)
+
+- Use a 300 ms submission interval for all low-flash updates and remove the initial movement delay.
+- Test the first changed frame, sustained movement, the final frame after release, and display-busy retries.
+
+## Platinum v0.1.2 (2026-11-10)
+
+- Use low-flash DU4 for gameplay updates and fall back to monochrome DU if the driver rejects DU4.
+- Replace automatic gameplay clearing with the CLEAN touch button. Add tests for palette levels and manual-only clearing.
+
+## Platinum v0.1.1 (2026-11-10)
+
+- Fix the NPC loader's cross-bank call in the locally built ROM. Add a regression that walks from home to Daode, opens his dialogue, and walks away after closing it.
+- Coalesce walking frames, use partial GC16 redraws, and clear only the game viewport after repeated movement updates settle.
+- Retry temporary EPDC failures and log elapsed time, the exit reason, and refresh counts.
+
+## Platinum v0.1.0 (2026-11-09)
+
+- Add a dedicated KUAL entry that runs the local GMUD_GB CGB ROM on PW1 with Gambatte, touch controls and throttled grayscale refresh.
+- Persist both game slots in a 32 KiB SRAM file and restore the Kindle framebuffer after a protected session. Allow the shared launcher to cancel its recovery watchdogs on exit.
+- Add a static ARM installer with source and licenses, plus host tests for rendering bounds and the optional local ROM.
+
 ## Standalone v0.1.0 (2026-11-09)
 
 - Reimplement the opening as an offline C++ game with three small Ping’an Town maps, NPC conversations and a stone delivery job.

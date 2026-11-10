@@ -26,6 +26,9 @@ static_assert(sizeof(MUpdate)==72, "Unexpected PW1 MXCFB update ABI");
 #define MXCFB_SEND_UPDATE _IOW('F', 0x2E, MUpdate)
 #endif
 static const uint32_t WAVEFORM_MODE_AUTO = 257;
+static const uint32_t WAVEFORM_MODE_DU = 1;
+static const uint32_t WAVEFORM_MODE_GC16 = 2;
+static const uint32_t WAVEFORM_MODE_DU4 = 7;
 static const uint32_t UPDATE_MODE_PARTIAL = 0;
 static const uint32_t UPDATE_MODE_FULL = 1;
 static const int32_t TEMP_USE_AMBIENT = 0x1000;
@@ -135,19 +138,36 @@ void FbScreen::blit_mono_1bpp_scaled(int x,int y,int sw,int sh,const uint8_t* bi
  }
 }
 bool FbScreen::refresh(int x,int y,int ww,int hh,bool full){
- if(fd<0||ww<=0||hh<=0)return false;
+ return submit_refresh(x,y,ww,hh,full,WAVEFORM_MODE_AUTO)==FbRefreshResult::Submitted;
+}
+FbRefreshResult FbScreen::refresh_game(int x,int y,int ww,int hh,FbGameUpdate mode){
+ switch(mode){
+  case FbGameUpdate::Mono: return submit_refresh(x,y,ww,hh,false,WAVEFORM_MODE_DU);
+  case FbGameUpdate::Gray4: return submit_refresh(x,y,ww,hh,false,WAVEFORM_MODE_DU4);
+  case FbGameUpdate::Clear: return submit_refresh(x,y,ww,hh,true,WAVEFORM_MODE_GC16);
+ }
+ return FbRefreshResult::Failed;
+}
+FbRefreshResult FbScreen::submit_refresh(int x,int y,int ww,int hh,bool full,uint32_t waveform){
+ if(fd<0||ww<=0||hh<=0)return FbRefreshResult::Failed;
  const int x1=std::max(0,std::min(x,w));
  const int y1=std::max(0,std::min(y,h));
  const int x2=std::max(x1,std::min(x+ww,w));
  const int y2=std::max(y1,std::min(y+hh,h));
- if(x2<=x1||y2<=y1)return false;
+ if(x2<=x1||y2<=y1)return FbRefreshResult::Failed;
  MUpdate upd{};
  upd.update_region={(uint32_t)y1,(uint32_t)x1,(uint32_t)(x2-x1),(uint32_t)(y2-y1)};
- upd.waveform_mode=WAVEFORM_MODE_AUTO;
+ upd.waveform_mode=waveform;
  upd.update_mode=full?UPDATE_MODE_FULL:UPDATE_MODE_PARTIAL;
  upd.update_marker=0;
  upd.temp=TEMP_USE_AMBIENT;
- const int r=ioctl(fd,MXCFB_SEND_UPDATE,&upd);
- if(r<0)std::fprintf(stderr,"EPDC refresh ioctl failed: %s\n",strerror(errno));
- return r==0;
+ if(ioctl(fd,MXCFB_SEND_UPDATE,&upd)==0)return FbRefreshResult::Submitted;
+ const int error=errno;
+ if(waveform!=WAVEFORM_MODE_AUTO && (error==EBUSY||error==EAGAIN||error==EINTR||error==ENOMEM))
+  return FbRefreshResult::Busy;
+ std::fprintf(stderr,"EPDC refresh ioctl failed (%d, waveform=%u, rect=%d,%d %dx%d): %s\n",
+  error,waveform,x1,y1,x2-x1,y2-y1,strerror(error));
+ if(waveform==WAVEFORM_MODE_DU4 && (error==EINVAL||error==ENOTTY||error==EOPNOTSUPP))
+  return FbRefreshResult::Unsupported;
+ return FbRefreshResult::Failed;
 }

@@ -1,0 +1,9 @@
+{
+  "items": [
+    {
+      "name": "开始游戏",
+      "priority": 0,
+      "action": "./launch.sh"
+    }
+  ]
+}

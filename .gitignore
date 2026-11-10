@@ -1,6 +1,8 @@
 build-*/
 release-root/
 *.zip
+*.gbc
+*.sav
 *.pyc
 __pycache__/
 roms/*.bin
