@@ -35,7 +35,7 @@ int main() {
     SaveFile reopened(dir);
     CHECK(reopened.load(loaded) == SaveStatus::Loaded && loaded.hero.coins == 99);
     replace(second, {0,1,2});
-    CHECK(reopened.load(loaded) == SaveStatus::Loaded && loaded.hero.coins == 30);
+    CHECK(reopened.load(loaded) == SaveStatus::Loaded && loaded.hero.coins == 100);
     CHECK(reopened.write(hero));
     auto future = encode_save(hero, 3);
     CHECK(!future.empty());

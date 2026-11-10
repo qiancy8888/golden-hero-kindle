@@ -40,139 +40,153 @@ const ItemDef& item_def(Item item) { return items[index(item)]; }
 const SectDef& sect_def(Sect sect) { return sects[index(sect)]; }
 
 int Hero::max_health() const {
-    return 30 + 2 * attributes[index(Attribute::Constitution)] + 3 * skills[index(Skill::Force)];
+    return 60 + 2 * attributes[index(Attribute::Constitution)] + 3 * skills[index(Skill::Force)];
 }
 
 int Hero::max_energy() const {
-    return 10 + attributes[index(Attribute::Constitution)] + 4 * skills[index(Skill::Force)];
+    return 4 * skills[index(Skill::Force)];
 }
 
 int Hero::attack() const {
     const bool armed = weapon != Item::Count;
     const int base_skill = skills[index(armed ? Skill::Sword : Skill::Fist)];
-    return 5 + attributes[in…7984 tokens truncated…p::Bounty:
-        state_.hunt = Hunt::Tracking;
-        open(Page::Town);
-        record(u8"到平安镇东缉拿恶人。");
+    return 5 + attributes[index(Attribute::Strength)] / 2 + base_skill * 2
+        + skills[index(Skill::Sect)] + (armed ? item_def(weapon).attack : 0);
+}
+
+int Hero::defense() const {
+    return attributes[index(Attribute::Constitution)] / 4 + skills[index(Skill::Dodge)]
+        + skills[index(Skill::Force)] + (armor != Item::Count ? item_def(armor).defense : 0);
+}
+
+int Hero::age() const { return 14 + static_cast<int>(steps / 2500); }
+
+int Hero::amount(Item item) const { return bag[index(item)]; }
+
+bool Hero::add(Item item, int count) {
+    int total = amount(item) + count;
+    if (total < 0 || total > inventory_limit) return false;
+    bag[index(item)] = static_cast<uint16_t>(total);
+    return true;
+}
+
+bool Hero::use(Item item) {
+    if (!amount(item)) return false;
+    switch (item) {
+    case Item::Bun:
+        if (food == food_limit) return false;
+        food = std::min(food_limit, food + 45);
         break;
-    case Op::ReportBounty:
-        state_.hunt = Hunt::None;
-        hero.reward(250 + hero.experience / 10, 65, 36);
-        if (state_.merit < 9999) ++state_.merit;
-        open(Page::Town);
-        record(u8"捕快已发放经验、潜能和赏金。");
+    case Item::Water:
+        if (drink == drink_limit) return false;
+        drink = std::min(drink_limit, drink + 45);
         break;
-    case Op::Buy: {
-        const Item item = static_cast<Item>(entry.value);
-        const int price = item_def(item).price;
-        if (hero.coins < price) notice_ = u8"钱不够。";
-        else if (!hero.add(item, 1)) notice_ = u8"背包放不下了。";
-        else { hero.coins -= price; record(u8"已放入背包。"); refresh(); }
+    case Item::Fish:
+        if (food == food_limit && health == max_health()) return false;
+        food = std::min(food_limit, food + 25);
+        health = std::min(max_health(), health + 12);
         break;
+    case Item::Medicine:
+        if (health == max_health()) return false;
+        health = std::min(max_health(), health + 35);
+        break;
+    default:
+        const ItemDef& def = item_def(item);
+        if (def.attack) { weapon = weapon == item ? Item::Count : item; return true; }
+        if (def.defense) { armor = armor == item ? Item::Count : item; return true; }
+        return false;
     }
-    case Op::SellFish:
-        if (hero.add(Item::Fish, -1)) { hero.reward(0, 0, 5); refresh(); record(u8"卖出一尾鲤鱼。"); }
-        break;
-    case Op::Train:
-        if (hero.train(static_cast<Skill>(entry.value))) { refresh(); record(u8"武学提升一级。"); }
-        else notice_ = u8"请检查潜能、饮食或基本功。";
-        break;
-    case Op::Join: {
-        const Sect sect = local_sect(area());
-        if (!accepts(sect, hero)) { notice_ = u8"人物条件未达到入门要求。"; break; }
-        hero.sect = sect;
-        open(Page::Town);
-        record(u8"拜师成功，可向师父请教。");
-        break;
-    }
-    case Op::Battle:
-        enemy_ = &opponent(target_->role, area());
-        enemy_health_ = enemy_->health;
-        open(Page::Battle);
-        break;
-    case Op::Fight: combat(static_cast<BattleAction>(entry.value)); break;
-    case Op::Use:
-        if (hero.use(static_cast<Item>(entry.value))) { refresh(); record(u8"已使用或调整装备。"); }
-        else notice_ = u8"现在用不上这件物品。";
-        break;
-    case Op::Rest:
-        if (hero.coins < entry.value) { notice_ = u8"钱不够。"; break; }
-        hero.coins -= entry.value;
-        hero.restore();
-        if (!entry.value) { hero.food = 100; hero.drink = 100; }
-        record(u8"气血和内力已恢复。");
-        break;
-    case Op::Fish:
-        if (!hero.amount(Item::FishingRod)) { notice_ = u8"先买一支钓竿。"; break; }
-        if (hero.add(Item::Fish, 1)) { hero.advance(); record(u8"钓到一尾鲤鱼。"); }
-        else notice_ = u8"鱼篓已经装满。";
-        break;
-    case Op::Mine:
-        if (hero.add(Item::Iron, 1)) { hero.advance(); record(u8"拾到一块铁矿。"); }
-        else notice_ = u8"背包放不下了。";
-        break;
-    case Op::Forge:
-        if (hero.amount(Item::Iron) < 3 || hero.coins < 100) { notice_ = u8"还缺铁矿或钱。"; break; }
-        if (!hero.add(Item::ForgedSword, 1)) { notice_ = u8"背包放不下了。"; break; }
-        hero.add(Item::Iron, -3);
-        hero.coins -= 100;
-        record(u8"铸成一柄新剑。");
-        break;
-    case Op::BuyHouse:
-        if (hero.coins < 200) { notice_ = u8"还凑不齐二百文。"; break; }
-        hero.coins -= 200;
-        state_.has_house = true;
-        refresh();
-        record(u8"你在桃花源有了一处宅院。");
-        break;
-    case Op::Revive:
-        hero.coins -= hero.coins / 10;
-        hero.restore();
-        hero.food = 100;
-        hero.drink = 100;
-        state_.area = Area::Home;
-        state_.position = {9, 5};
-        open(Page::Town);
-        record(u8"你醒在家里，少了些盘缠。");
-        break;
-    case Op::ReadEnding:
-        open(Page::Ending);
-        notice_ = u8"八坛平定，平安镇重归安宁。";
-        break;
+    return add(item, -1);
+}
+
+bool Hero::train(Skill skill) {
+    auto& level = skills[index(skill)];
+    const int cost = 4 + level / 3;
+    if (level == skill_limit || potential < cost || food == 0 || drink == 0 ||
+        (skill == Skill::Sect && (sect == Sect::None || level >= skills[index(Skill::Fist)])))
+        return false;
+    potential -= cost;
+    ++level;
+    return true;
+}
+
+void Hero::advance() {
+    if (steps < 200000) ++steps;
+    if (steps % 12 == 0) {
+        food = std::max(0, food - 1);
+        drink = std::max(0, drink - 2);
     }
 }
 
-void Town::combat(BattleAction action) {
-    const Exchange result = exchange(state_.hero, *enemy_, enemy_health_, action, state_.random);
-    switch (result.result) {
-    case BattleResult::Unavailable: notice_ = u8"内力不足或此时无法用药。"; break;
-    case BattleResult::Continue:
-        notice_ = numbered(u8"你打出 ", result.dealt) + numbered(u8" 点，受伤 ", result.received);
-        break;
-    case BattleResult::Escaped:
-        open(Page::Town);
-        record(u8"你离开了战斗。");
-        break;
-    case BattleResult::Defeat:
-        state_.hero.health = 1;
-        state_.hero.energy = 0;
-        state_.area = Area::Underworld;
-        state_.position = {9, 5};
-        open(Page::Town);
-        record(u8"你败下阵来，去见阎罗王。");
-        break;
-    case BattleResult::Victory:
-        state_.hero.reward(enemy_->experience, enemy_->potential, enemy_->coins);
-        if (target_->role == Role::Bandit && state_.hunt == Hunt::Tracking) state_.hunt = Hunt::Report;
-        if (target_->role == Role::AltarLord) ++state_.altar;
-        if (state_.altar == completed_altars) {
-            open(Page::Ending);
-            record(u8"八坛平定，平安镇重归安宁。");
-        } else {
-            open(Page::Town);
-            record(target_->role == Role::AltarLord ? u8"攻破据点，获得下一坛地图。" : u8"获胜，得到经验、潜能和铜钱。");
-        }
-        break;
+void Hero::restore() { health = max_health(); energy = max_energy(); }
+
+void Hero::reward(int exp, int points, int money) {
+    experience = std::min(stat_limit, experience + exp);
+    potential = std::min(stat_limit, potential + points);
+    coins = std::min(stat_limit, coins + money);
+}
+
+bool Hero::valid() const {
+    if (appearance >= 3 || name >= 6 || index(sect) >= index(Sect::Count)) return false;
+    if (std::accumulate(attributes.begin(), attributes.end(), 0) > 80) return false;
+    for (int value : attributes) if (value < 10 || value > 30) return false;
+    for (int count : bag) if (count > inventory_limit) return false;
+    if (weapon != Item::Count &&
+        (index(weapon) >= item_count || !item_def(weapon).attack || !amount(weapon))) return false;
+    if (armor != Item::Count &&
+        (index(armor) >= item_count || !item_def(armor).defense || !amount(armor))) return false;
+    return health >= 1 && health <= max_health() && energy >= 0 && energy <= max_energy()
+        && food >= 0 && food <= food_limit && drink >= 0 && drink <= drink_limit
+        && experience >= 0 && experience <= stat_limit && potential >= 0 && potential <= stat_limit
+        && coins >= 0 && coins <= stat_limit && steps <= 200000;
+}
+
+bool accepts(Sect sect, const Hero& hero) {
+    switch (sect) {
+    case Sect::Snow: return hero.attributes[index(Attribute::Agility)] >= 22;
+    case Sect::Flower: return hero.appearance == 1;
+    case Sect::Beast: return hero.attributes[index(Attribute::Insight)] <= 18;
+    default: return sect != Sect::None;
     }
+}
+
+Hero new_hero(const Hero& draft) {
+    Hero hero;
+    hero.appearance = draft.appearance;
+    hero.name = draft.name;
+    hero.attributes = draft.attributes;
+    hero.coins = 100;
+    hero.potential = 100;
+    hero.restore();
+    return hero;
+}
+
+Exchange exchange(Hero& hero, const Opponent& opponent, int& enemy_health,
+                  BattleAction action, uint32_t& state) {
+    if (action == BattleAction::Flee) return {BattleResult::Escaped, 0, 0};
+    if (action == BattleAction::Heal && !hero.use(Item::Medicine))
+        return {BattleResult::Unavailable, 0, 0};
+    const int special_cost = 8;
+    if (action == BattleAction::Special) {
+        if (hero.energy < special_cost) return {BattleResult::Unavailable, 0, 0};
+        hero.energy -= special_cost;
+    }
+    int dealt = 0;
+    if (action == BattleAction::Strike || action == BattleAction::Special) {
+        const int aim = std::max(65, std::min(98, 85 +
+            int(hero.attributes[index(Attribute::Agility)]) / 2 - opponent.agility));
+        if (roll(state, 100) < aim || action == BattleAction::Special) {
+            const int power = hero.attack() + (action == BattleAction::Special
+                ? 7 + hero.skills[index(Skill::Sect)] * 2 : 0);
+            dealt = std::min(enemy_health, std::max(1, power + roll(state, 5) - opponent.defense));
+            enemy_health -= dealt;
+        }
+    }
+    if (enemy_health <= 0) return {BattleResult::Victory, dealt, 0};
+    const int blocked = hero.defense() + (action == BattleAction::Guard ? 12 : 0);
+    const int received = std::min(hero.health, std::max(1, opponent.attack + roll(state, 5) - blocked));
+    hero.health -= received;
+    if (action == BattleAction::Guard) hero.energy = std::min(hero.max_energy(), hero.energy + 4);
+    return {hero.health == 0 ? BattleResult::Defeat : BattleResult::Continue, dealt, received};
 }
 }

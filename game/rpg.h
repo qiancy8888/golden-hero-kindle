@@ -13,6 +13,8 @@ enum class Sect { None, Taiji, Bagua, Snow, Flower, Lotus, Iga, Beast, Maoshan, 
 
 constexpr int skill_limit = 255;
 constexpr int inventory_limit = 999;
+constexpr int food_limit = 375;
+constexpr int drink_limit = 360;
 constexpr int stat_limit = 100000000;
 constexpr std::size_t attribute_count = static_cast<std::size_t>(Attribute::Count);
 constexpr std::size_t item_count = static_cast<std::size_t>(Item::Count);

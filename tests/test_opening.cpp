@@ -178,6 +178,8 @@ int main() {
     CHECK(town.move(Direction::Down) && town.move(Direction::Left));
     choose(town, u8"进入平安镇");
     CHECK(town.hero().age() == 14 && town.hero().appearance == 1 && town.hero().name == 1);
+    CHECK(town.hero().coins == 100 && town.hero().potential == 100);
+    CHECK(town.hero().health == 100 && town.hero().energy == 0);
     CHECK(town.hero().attributes[0] == 19 && town.take_save_request());
     CHECK(town.nearby() && town.nearby()->role == Role::Elder);
     CHECK(!town.move(Direction::Up));

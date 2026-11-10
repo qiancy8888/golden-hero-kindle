@@ -6,6 +6,7 @@
 - Persist progress using two checksummed save slots. Verify fallback on a damaged slot and protect newer-format saves.
 - Replace the standalone session timer with a heartbeat watchdog and retain the single-instance framebuffer lock.
 - Add a host playthrough through the final encounter and a save-file recovery test.
+- Document the verified starting stats and add a read-only analyzer for the original Flash scene index.
 
 ## Standalone v0.1.0 (2026-11-09)
 
